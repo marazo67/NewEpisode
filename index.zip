@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H&M</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #001a4d;
+            --secondary: #003d99;
+            --accent: #00d4ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #001a4d, #003d99);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 1s ease;
+        }
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-content {
+            text-align: center;
+        }
+        .loading-content h1 {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(0,212,255,0.3);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            margin: 30px auto;
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== DASHBOARD ===== */
+        .dashboard-page {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+        .dashboard-page.active {
+            display: flex;
+        }
+
+        .top-bar {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1.5px solid rgba(0, 212, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .top-bar h1 {
+            font-size: 22px;
+            font-weight: 700;
+            transition: all 0.5s ease;
+        }
+
+        .top-icons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: var(--accent);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon-btn:hover {
+            background: rgba(0, 212, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 700px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .page-section {
+            display: none;
+        }
+        .page-section.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .page-section h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: var(--accent);
+        }
+
+        /* ===== POSTS (UPDATES/NOTIFICATIONS) ===== */
+        .post {
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0,212,255,0.15);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .post-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .post-info h3 { font-size: 14px; font-weight: 700; }
+        .post-info p { font-size: 11px; opacity: 0.6; }
+        .post-content { margin-bottom: 12px; line-height: 1.6; font-size: 14px; }
+        .post-image { width: 100%; border-radius: 10px; max-height: 300px; object-fit: cover; }
+
+        /* ===== FILES ===== */
+        .vpn-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .vpn-card {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.25);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .vpn-card:hover {
+            background: rgba(0,212,255,0.18);
+            border-color: rgba(0,212,255,0.5);
+            transform: translateY(-4px);
+        }
+        .vpn-card-icon { font-size: 28px; margin-bottom: 8px; }
+        .vpn-card-name { font-size: 11px; font-weight: 700; }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+        .file-item {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .file-item-icon { font-size: 24px; margin-bottom: 8px; }
+        .file-item-name { font-size: 11px; font-weight: 600; margin-bottom: 8px; word-break: break-word; }
+        .download-btn {
+            width: 100%;
+            padding: 6px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .download-btn:hover { background: rgba(0,212,255,0.3); }
+
+        /* ===== ACCOUNTS ===== */
+        .account-card {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .account-info h3 { font-size: 13px; font-weight: 700; }
+        .account-info p { font-size: 11px; opacity: 0.7; }
+        .account-actions { display: flex; gap: 8px; }
+        .account-actions button {
+            padding: 6px 12px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+        .add-account-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+            border: none;
+            border-radius: 10px;
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        /* ===== ADS (GLOWING & SHUFFLING) ===== */
+        .ads-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            transition: all 0.5s ease;
+            min-height: 80px;
+        }
+        .ad-banner {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            min-width: 200px;
+            backdrop-filter: blur(5px);
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--accent);
+            animation: glowPulse 2s infinite alternate;
+        }
+        @keyframes glowPulse {
+            from { box-shadow: 0 0 10px var(--accent); }
+            to { box-shadow: 0 0 25px var(--accent), 0 0 40px #00ffff; }
+        }
+        .ad-banner:hover { transform: scale(1.05); background: rgba(0,212,255,0.2); }
+        .ad-icon { font-size: 30px; }
+        .ad-text { font-size: 14px; font-weight: 600; }
+        .ad-text small { opacity: 0.7; font-size: 11px; }
+
+        /* ===== SETTINGS ===== */
+        .settings-group {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .settings-group h3 { color: var(--accent); margin-bottom: 12px; font-size: 13px; }
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,212,255,0.1);
+            font-size: 12px;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .toggle {
+            width: 40px;
+            height: 24px;
+            background: rgba(0,212,255,0.25);
+            border-radius: 12px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s;
+        }
+        .toggle.active { background: var(--accent); }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+        .toggle.active::after { left: 18px; }
+        .privacy-text { background: rgba(0,212,255,0.08); border-radius: 10px; padding: 16px; font-size: 12px; }
+        .settings-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: var(--accent);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .logout-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255,100,100,0.15);
+            border: 1.5px solid rgba(255,100,100,0.3);
+            color: #ff9999;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        /* ===== FLOATING NAVIGATION (BIGGER) ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 212, 255, 0.4);
+            border-radius: 50px;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 10px;
+            z-index: 999;
+            box-shadow: 0 10px 40px rgba(0,212,255,0.4);
+            transition: 0.3s;
+        }
+        .bottom-nav:hover {
+            box-shadow: 0 15px 50px rgba(0,212,255,0.6);
+            transform: translateX(-50%) translateY(-3px);
+        }
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 8px;
+            cursor: pointer;
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 40px;
+            transition: 0.3s;
+        }
+        .nav-item.active {
+            color: var(--accent);
+            background: rgba(0,212,255,0.2);
+            transform: scale(1.1);
+        }
+        .nav-item:hover {
+            color: var(--accent);
+            background: rgba(0,212,255,0.15);
+        }
+        .nav-icon { font-size: 24px; }
+
+        /* ===== ADMIN PANEL ===== */
+        .admin-page {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .admin-page.active { display: flex; }
+        .admin-sidebar {
+            background: rgba(0,0,0,0.3);
+            border-right: 1.5px solid rgba(0,212,255,0.2);
+            padding: 20px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 220px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .admin-sidebar h2 { color: var(--accent); margin-bottom: 20px; font-size: 16px; }
+        .admin-menu { list-style: none; }
+        .admin-menu li { margin-bottom: 8px; }
+        .admin-menu button {
+            width: 100%;
+            text-align: left;
+            padding: 10px;
+            background: rgba(0,212,255,0.08);
+            border: 1px solid rgba(0,212,255,0.15);
+            color: rgba(255,255,255,0.8);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .admin-menu button:hover,
+        .admin-menu button.active {
+            background: rgba(0,212,255,0.2);
+            border-color: rgba(0,212,255,0.4);
+            color: var(--accent);
+        }
+        .admin-content {
+            margin-left: 220px;
+            flex: 1;
+            padding: 25px;
+        }
+        .admin-header { margin-bottom: 25px; border-bottom: 1.5px solid rgba(0,212,255,0.2); padding-bottom: 15px; }
+        .admin-header h1 { font-size: 24px; }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        .admin-card {
+            background: rgba(0,212,255,0.08);
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .admin-card h3 { color: var(--accent); margin-bottom: 16px; }
+        .admin-btn {
+            padding: 10px 16px;
+            background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+            border: none;
+            border-radius: 8px;
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-right: 8px;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .table thead { background: rgba(0,212,255,0.1); }
+        .table th, .table td { padding: 8px; border-bottom: 1px solid rgba(0,212,255,0.2); }
+
+        /* ===== MODALS ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: 1.5px solid rgba(0,212,255,0.3);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+        }
+        .modal-content h2 { color: var(--accent); margin-bottom: 18px; }
+        .close-modal {
+            position: absolute;
+            top: 10px; right: 15px;
+            background: none; border: none;
+            color: var(--accent);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar { width: 180px; }
+            .admin-content { margin-left: 180px; }
+        }
+        @media (max-width: 480px) {
+            .admin-sidebar { width: 100%; height: auto; position: relative; }
+            .admin-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <h1>H&M</h1>
+            <div class="loading-spinner"></div>
+            <p>Establishing secured connection...</p>
+            <p>🔒 AES-256 ENCRYPTION ACTIVE</p>
+        </div>
+    </div>
+
+    <!-- DASHBOARD PAGE -->
+    <div class="dashboard-page" id="dashboardPage">
+        <div class="top-bar">
+            <h1 id="rotatingTitle">H&M</h1>
+            <div class="top-icons">
+                <button class="icon-btn" onclick="showNotifications()">🔔</button>
+                <button class="icon-btn" onclick="adminAccess()">🔐</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- ADS BANNER (glowing, shuffling) -->
+            <div id="adsBanner" class="ads-container"></div>
+
+            <!-- HOME (UPDATES / NOTIFICATIONS) -->
+            <div id="home-section" class="page-section active">
+                <h2>📰 Latest Updates & Notifications</h2>
+                <div id="updatesList"></div>
+            </div>
+
+            <!-- FILES -->
+            <div id="files-section" class="page-section">
+                <h2>📁 Download VPN Files</h2>
+                <div class="vpn-types" id="vpnTypesContainer"></div>
+                <div id="selectedVpnFiles"></div>
+            </div>
+
+            <!-- PROFILE / ACCOUNTS -->
+            <div id="profile-section" class="page-section">
+                <h2>👤 My Accounts</h2>
+                <button class="add-account-btn" onclick="openAddAccountModal()">➕ ADD NEW ACCOUNT</button>
+                <div id="accountsList"></div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div id="settings-section" class="page-section">
+                <h2>⚙️ Settings & Privacy</h2>
+                <div class="settings-group">
+                    <h3>🔐 Privacy Settings</h3>
+                    <div class="settings-item"><span>Profile Visibility</span><div class="toggle active" onclick="toggleSetting(this)"></div></div>
+                    <div class="settings-item"><span>Show Online Status</span><div class="toggle active" onclick="toggleSetting(this)"></div></div>
+                    <div class="settings-item"><span>Allow Notifications</span><div class="toggle active" onclick="toggleSetting(this)"></div></div>
+                </div>
+                <div class="settings-group">
+                    <h3>📋 Privacy Promise</h3>
+                    <div class="privacy-text">Your data is safe with us. We never sell your information.</div>
+                </div>
+                <div class="settings-group">
+                    <h3>⚙️ Account Actions</h3>
+                    <button class="settings-btn" onclick="editProfile()">✏️ EDIT PROFILE</button>
+                    <button class="settings-btn" onclick="changePassword()">🔐 CHANGE PASSWORD</button>
+                    <button class="logout-btn" onclick="logout()">🚪 LOGOUT</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLOATING NAVIGATION (4 items, host checker removed) -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="navigateTo(event, 'home')"><span class="nav-icon">🏠</span><span>HOME</span></div>
+            <div class="nav-item" onclick="navigateTo(event, 'files')"><span class="nav-icon">📁</span><span>FILES</span></div>
+            <div class="nav-item" onclick="navigateTo(event, 'profile')"><span class="nav-icon">👤</span><span>ACCOUNTS</span></div>
+            <div class="nav-item" onclick="navigateTo(event, 'settings')"><span class="nav-icon">⚙️</span><span>SETTINGS</span></div>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div class="admin-page" id="adminPage">
+        <div class="admin-sidebar">
+            <h2>🔐 ADMIN PANEL</h2>
+            <ul class="admin-menu">
+                <li><button class="active" onclick="showAdminSection(event, 'admin-dashboard')">📊 Dashboard</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-posts')">📝 Notifications</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-files')">📤 Files</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-ads')">📢 Ads</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-users')">👥 Users</button></li>
+                <li><button onclick="logoutAdmin()" style="background: rgba(255,100,100,0.15);">🚪 LOGOUT</button></li>
+            </ul>
+        </div>
+        <div class="admin-content">
+            <div class="admin-header"><h1>ADMIN DASHBOARD</h1></div>
+
+            <!-- Dashboard -->
+            <div class="admin-section active" id="admin-dashboard-section">
+                <div class="admin-card">
+                    <h3>📊 System Stats</h3>
+                    <table class="table">
+                        <tr><th>Metric</th><th>Value</th></tr>
+                        <tr><td>Total Users</td><td id="statUsers">0</td></tr>
+                        <tr><td>Total Notifications</td><td id="statUpdates">0</td></tr>
+                        <tr><td>Total Files</td><td id="statFiles">0</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Notifications (Updates) -->
+            <div class="admin-section" id="admin-posts-section">
+                <div class="admin-card">
+                    <h3>📝 Create Notification</h3>
+                    <form onsubmit="createUpdate(event)">
+                        <div class="form-group"><label>Title</label><input type="text" id="updateTitle" required></div>
+                        <div class="form-group"><label>Description</label><textarea id="updateDesc" required></textarea></div>
+                        <div class="form-group"><label>Image (optional)</label><input type="file" id="updateImage" accept="image/*"></div>
+                        <button type="submit" class="admin-btn">POST NOTIFICATION</button>
+                    </form>
+                </div>
+                <div class="admin-card">
+                    <h3>📋 Recent Notifications</h3>
+                    <div id="adminUpdatesList"></div>
+                </div>
+            </div>
+
+            <!-- Files -->
+            <div class="admin-section" id="admin-files-section">
+                <div class="admin-card">
+                    <h3>📤 Upload File</h3>
+                    <form onsubmit="uploadFile(event)">
+                        <div class="form-group"><label>Type</label>
+                            <select id="fileType">
+                                <option value="HTTP CUSTOM">HTTP CUSTOM</option><option value="TLS TUNNEL">TLS TUNNEL</option>
+                                <option value="NPV TUNNEL">NPV TUNNEL</option><option value="DARK TUNNEL">DARK TUNNEL</option>
+                                <option value="ZIVPN">ZIVPN</option><option value="HA TUNNEL">HA TUNNEL</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>File</label><input type="file" id="vpnFile" required></div>
+                        <button type="submit" class="admin-btn">UPLOAD</button>
+                    </form>
+                </div>
+                <div class="admin-card">
+                    <h3>📁 Uploaded Files</h3>
+                    <table class="table"><thead><tr><th>Name</th><th>Type</th><th>Date</th><th>Action</th></tr></thead><tbody id="filesListTable"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Ads -->
+            <div class="admin-section" id="admin-ads-section">
+                <div class="admin-card">
+                    <h3>📢 Add Ad</h3>
+                    <form onsubmit="addAd(event)">
+                        <div class="form-group"><label>Type</label><input type="text" id="adType" placeholder="Telegram" required></div>
+                        <div class="form-group"><label>Link</label><input type="url" id="adLink" required></div>
+                        <div class="form-group"><label>Icon</label><input type="text" id="adIcon" value="✈️"></div>
+                        <div class="form-group"><label>Message</label><input type="text" id="adMessage" value="Click to join"></div>
+                        <div class="form-group"><label>Active</label><select id="adActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+                        <button type="submit" class="admin-btn">ADD</button>
+                    </form>
+                </div>
+                <div class="admin-card">
+                    <h3>📋 Current Ads</h3>
+                    <table class="table"><thead><tr><th>Icon</th><th>Type</th><th>Message</th><th>Link</th><th>Active</th><th>Action</th></tr></thead><tbody id="adsListTable"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Users -->
+            <div class="admin-section" id="admin-users-section">
+                <div class="admin-card">
+                    <h3>👥 Registered Users</h3>
+                    <table class="table"><thead><tr><th>Username</th><th>Email</th><th>Accounts</th><th>Joined</th></tr></thead><tbody id="usersListTable"></tbody></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeAdminModal()">✕</button>
+            <h2>🔐 Admin Access</h2>
+            <form onsubmit="verifyAdmin(event)">
+                <div class="form-group"><label>PIN</label><input type="password" id="adminPin" placeholder="Enter PIN" maxlength="4" required></div>
+                <div class="form-group"><label>Password</label><input type="password" id="adminPassword" placeholder="Enter password" required></div>
+                <button type="submit" class="btn">ACCESS</button>
+            </form>
+        </div>
+    </div>
+    <div class="modal" id="addAccountModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeAddAccountModal()">✕</button>
+            <h2>➕ Add Account</h2>
+            <form onsubmit="addAccount(event)">
+                <div class="form-group"><label>Username</label><input type="text" id="newAccountUsername" required></div>
+                <div class="form-group"><label>Email</label><input type="email" id="newAccountEmail" required></div>
+                <button type="submit" class="btn">CREATE</button>
+            </form>
+        </div>
+    </div>
+    <div class="modal" id="editAdModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeEditAdModal()">✕</button>
+            <h2>✏️ Edit Ad</h2>
+            <form onsubmit="updateAd(event)">
+                <input type="hidden" id="editAdId">
+                <div class="form-group"><label>Type</label><input type="text" id="editAdType" required></div>
+                <div class="form-group"><label>Link</label><input type="url" id="editAdLink" required></div>
+                <div class="form-group"><label>Icon</label><input type="text" id="editAdIcon" required></div>
+                <div class="form-group"><label>Message</label><input type="text" id="editAdMessage" required></div>
+                <div class="form-group"><label>Active</label><select id="editAdActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+                <button type="submit" class="btn">UPDATE</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ========== DATA STORAGE ==========
+        const DATABASE = {
+            users: [
+                { id: 1, username: 'Demo', email: 'demo@example.com', password: 'demo', accounts: [], joinedDate: '2025-01-01' }
+            ],
+            updates: [],
+            files: [],
+            ads: [
+                { id: 1, type: 'Telegram', link: 'https://t.me/example', icon: '✈️', message: 'Join our Telegram', active: true },
+                { id: 2, type: 'WhatsApp', link: 'https://wa.me/123456', icon: '📞', message: 'WhatsApp Group', active: true },
+                { id: 3, type: 'Signal', link: 'https://signal.org', icon: '🔊', message: 'Signal Channel', active: true }
+            ],
+            currentUser: { id: 1, username: 'DemoUser', email: 'demo@example.com', password: 'demo', accounts: [], joinedDate: '2025-01-01' }
+        };
+
+        // Load from localStorage
+        (function loadData() {
+            const saved = localStorage.getItem('configHubDB');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    Object.assign(DATABASE, parsed);
+                } catch (e) {}
+            }
+        })();
+
+        // ========== LOADING & INIT ==========
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                document.getElementById('dashboardPage').classList.add('active');
+                loadUpdates();
+                loadAccounts();
+                loadAds();
+                initVpnTypes();
+                startTitleRotation();
+                startAdShuffle();
+                updateAdminStats();
+            }, 3000);
+        });
+
+        // ========== ROTATING TITLE WITH COLOR CHANGE ==========
+        const titles = [
+            'ℍ&𝕄 ℙℝ𝕆𝔻𝕌ℂ𝕋𝕀𝕆ℕ',
+            '𝐇&𝐌 𝐔\'𝐑𝐄 𝐖𝐄𝐋𝐂𝐎𝐌𝐄🚀',
+            'Ⓖ︎Ⓔ︎Ⓣ︎ Ⓒ︎Ⓞ︎Ⓝ︎Ⓝ︎Ⓔ︎Ⓒ︎Ⓣ︎Ⓔ︎Ⓓ︎🚀',
+            '🇭 &🇲  🇵 🇷 🇴 🇩 🇺 🇨 🇹 🇮 🇴 🇳 ',
+            '卄&爪 匚ㄖ几千|ᜊ 卄ㄩ乃',
+            'ꎇꋪꏂꏂꈤꏂ꓄ ꅐ꒒ꋪꀷ🌍',
+            'H̶&M̶ P̶R̶O̶D̶U̶C̶T̶I̶O̶N̶'
+        ];
+        const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#c7b9ff', '#ff9ff6', '#6c5ce7', '#00cec9'];
+        let titleIdx = 0;
+        function startTitleRotation() {
+            setInterval(() => {
+                titleIdx = (titleIdx + 1) % titles.length;
+                const titleEl = document.getElementById('rotatingTitle');
+                titleEl.innerHTML = titles[titleIdx];
+                titleEl.style.color = colors[titleIdx];
+                titleEl.style.textShadow = `0 0 10px ${colors[titleIdx]}`;
+            }, 5000);
+        }
+
+        // ========== NAVIGATION ==========
+        function navigateTo(e, section) {
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(section + '-section').classList.add('active');
+            e.currentTarget.classList.add('active');
+            if (section === 'files') {
+                document.getElementById('selectedVpnFiles').innerHTML = '';
+            }
+        }
+
+        // ========== FILES ==========
+        function initVpnTypes() {
+            const types = ['HTTP CUSTOM', 'TLS TUNNEL', 'NPV TUNNEL', 'DARK TUNNEL', 'ZIVPN', 'HA TUNNEL'];
+            const container = document.getElementById('vpnTypesContainer');
+            container.innerHTML = types.map(t => `
+                <div class="vpn-card" onclick="selectVpnType('${t}')">
+                    <div class="vpn-card-icon">📁</div>
+                    <div class="vpn-card-name">${t}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectVpnType(type) {
+            const files = DATABASE.files.filter(f => f.type === type);
+            const container = document.getElementById('selectedVpnFiles');
+            if (files.length === 0) {
+                container.innerHTML = `<p style="opacity:0.7;">No files available for ${type}</p>`;
+                return;
+            }
+            container.innerHTML = `<p style="margin-bottom:12px;">Available ${type}:</p><div class="file-list">` +
+                files.map(f => `
+                    <div class="file-item">
+                        <div class="file-item-icon">📦</div>
+                        <div class="file-item-name">${f.name}</div>
+                        <button class="download-btn" onclick="downloadFile(${f.id})">⬇️ DOWNLOAD</button>
+                    </div>
+                `).join('') + '</div>';
+        }
+
+        function downloadFile(fileId) {
+            const file = DATABASE.files.find(f => f.id === fileId);
+            if (!file || !file.content) {
+                alert('File not available for download (maybe re-upload it).');
+                return;
+            }
+            const a = document.createElement('a');
+            a.href = file.content;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // ========== ACCOUNTS ==========
+        function loadAccounts() {
+            const list = document.getElementById('accountsList');
+            if (!DATABASE.currentUser) return;
+            const accounts = DATABASE.currentUser.accounts || [];
+            if (accounts.length === 0) {
+                list.innerHTML = '<p style="opacity:0.7;">No additional accounts yet</p>';
+                return;
+            }
+            list.innerHTML = accounts.map((acc, idx) => `
+                <div class="account-card">
+                    <div class="account-info"><h3>${acc.username}</h3><p>${acc.email}</p></div>
+                    <div class="account-actions">
+                        <button onclick="switchAccount(${idx})">SWITCH</button>
+                        <button onclick="removeAccount(${idx})">DELETE</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openAddAccountModal() { document.getElementById('addAccountModal').classList.add('active'); }
+        function closeAddAccountModal() { document.getElementById('addAccountModal').classList.remove('active'); }
+        function addAccount(e) {
+            e.preventDefault();
+            const username = document.getElementById('newAccountUsername').value;
+            const email = document.getElementById('newAccountEmail').value;
+            if (!DATABASE.currentUser.accounts) DATABASE.currentUser.accounts = [];
+            DATABASE.currentUser.accounts.push({ username, email });
+            saveData();
+            loadAccounts();
+            closeAddAccountModal();
+            alert('Account added!');
+        }
+        function switchAccount(idx) { alert('Switched to ' + DATABASE.currentUser.accounts[idx].username); }
+        function removeAccount(idx) {
+            if (confirm('Remove account?')) {
+                DATABASE.currentUser.accounts.splice(idx, 1);
+                saveData();
+                loadAccounts();
+            }
+        }
+
+        // ========== UPDATES (NOTIFICATIONS) ==========
+        function loadUpdates() {
+            const list = document.getElementById('updatesList');
+            if (DATABASE.updates.length === 0) {
+                list.innerHTML = '<p style="opacity:0.7;">No notifications yet</p>';
+                return;
+            }
+            list.innerHTML = DATABASE.updates.map(u => `
+                <div class="post">
+                    <div class="post-header">
+                        <div class="post-avatar">📢</div>
+                        <div class="post-info"><h3>Scottie</h3><p>${u.date}</p></div>
+                    </div>
+                    <div class="post-content"><strong>${u.title}</strong><br>${u.description}</div>
+                    ${u.image ? `<img src="${u.image}" class="post-image">` : ''}
+                </div>
+            `).join('');
+        }
+
+        // ========== ADS ==========
+        function loadAds() {
+            const container = document.getElementById('adsBanner');
+            const activeAds = DATABASE.ads.filter(a => a.active);
+            container.innerHTML = activeAds.map(ad => `
+                <div class="ad-banner" onclick="window.open('${ad.link}', '_blank')">
+                    <span class="ad-icon">${ad.icon}</span>
+                    <div class="ad-text">${ad.message}<br><small>${ad.type}</small></div>
+                </div>
+            `).join('');
+
+            const tbl = document.getElementById('adsListTable');
+            if (tbl) {
+                tbl.innerHTML = DATABASE.ads.map(ad => `
+                    <tr>
+                        <td>${ad.icon}</td><td>${ad.type}</td><td>${ad.message}</td>
+                        <td><a href="${ad.link}" target="_blank">Link</a></td><td>${ad.active ? '✅' : '❌'}</td>
+                        <td>
+                            <button onclick="openEditAdModal(${ad.id})">✏️</button>
+                            <button onclick="deleteAd(${ad.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function startAdShuffle() {
+            setInterval(() => {
+                const container = document.getElementById('adsBanner');
+                const ads = Array.from(container.children);
+                if (ads.length < 2) return;
+                const i = Math.floor(Math.random() * ads.length);
+                let j = Math.floor(Math.random() * ads.length);
+                while (j === i) j = Math.floor(Math.random() * ads.length);
+                container.insertBefore(ads[i], ads[j]);
+            }, 10000);
+        }
+
+        function addAd(e) {
+            e.preventDefault();
+            DATABASE.ads.push({
+                id: Date.now(),
+                type: document.getElementById('adType').value,
+                link: document.getElementById('adLink').value,
+                icon: document.getElementById('adIcon').value,
+                message: document.getElementById('adMessage').value,
+                active: document.getElementById('adActive').value === 'true'
+            });
+            saveData();
+            loadAds();
+            e.target.reset();
+        }
+
+        function openEditAdModal(id) {
+            const ad = DATABASE.ads.find(a => a.id === id);
+            if (!ad) return;
+            document.getElementById('editAdId').value = ad.id;
+            document.getElementById('editAdType').value = ad.type;
+            document.getElementById('editAdLink').value = ad.link;
+            document.getElementById('editAdIcon').value = ad.icon;
+            document.getElementById('editAdMessage').value = ad.message;
+            document.getElementById('editAdActive').value = ad.active ? 'true' : 'false';
+            document.getElementById('editAdModal').classList.add('active');
+        }
+        function closeEditAdModal() { document.getElementById('editAdModal').classList.remove('active'); }
+        function updateAd(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('editAdId').value);
+            const ad = DATABASE.ads.find(a => a.id === id);
+            if (ad) {
+                ad.type = document.getElementById('editAdType').value;
+                ad.link = document.getElementById('editAdLink').value;
+                ad.icon = document.getElementById('editAdIcon').value;
+                ad.message = document.getElementById('editAdMessage').value;
+                ad.active = document.getElementById('editAdActive').value === 'true';
+                saveData();
+                loadAds();
+                closeEditAdModal();
+            }
+        }
+        function deleteAd(id) {
+            if (confirm('Delete ad?')) {
+                DATABASE.ads = DATABASE.ads.filter(a => a.id !== id);
+                saveData();
+                loadAds();
+            }
+        }
+
+        // ========== SETTINGS ==========
+        function toggleSetting(el) { el.classList.toggle('active'); }
+        function editProfile() {
+            const newName = prompt('Enter new username:', DATABASE.currentUser.username);
+            if (newName) { DATABASE.currentUser.username = newName; saveData(); alert('Updated'); }
+        }
+        function changePassword() {
+            const newPass = prompt('Enter new password:');
+            if (newPass) { DATABASE.currentUser.password = newPass; saveData(); alert('Password changed'); }
+        }
+        function logout() { location.reload(); }
+        function showNotifications() { alert('No new notifications'); }
+
+        // ========== ADMIN FUNCTIONS ==========
+        function adminAccess() { document.getElementById('adminModal').classList.add('active'); }
+        function closeAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
+        function verifyAdmin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('adminPin').value;
+            const pass = document.getElementById('adminPassword').value;
+            if (pin === '5026' && pass === '078502') {
+                closeAdminModal();
+                showAdminPanel();
+            } else alert('Invalid credentials');
+        }
+        function showAdminPanel() {
+            document.getElementById('dashboardPage').classList.remove('active');
+            document.getElementById('adminPage').classList.add('active');
+            updateAdminStats();
+            loadAdminUpdates();
+            loadAdminFiles();
+            loadAdminUsers();
+            loadAds();
+        }
+        function logoutAdmin() {
+            document.getElementById('adminPage').classList.remove('active');
+            document.getElementById('dashboardPage').classList.add('active');
+        }
+        function showAdminSection(e, section) {
+            document.querySelectorAll('.admin-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.admin-menu button').forEach(el => el.classList.remove('active'));
+            document.getElementById(section + '-section').classList.add('active');
+            e.currentTarget.classList.add('active');
+        }
+        function updateAdminStats() {
+            document.getElementById('statUsers').textContent = DATABASE.users.length;
+            document.getElementById('statUpdates').textContent = DATABASE.updates.length;
+            document.getElementById('statFiles').textContent = DATABASE.files.length;
+        }
+        function loadAdminUpdates() {
+            const list = document.getElementById('adminUpdatesList');
+            if (DATABASE.updates.length === 0) {
+                list.innerHTML = '<p>No notifications</p>';
+                return;
+            }
+            list.innerHTML = DATABASE.updates.map((u, idx) => `
+                <div style="padding:8px; border-bottom:1px solid rgba(0,212,255,0.2);">
+                    <strong>${u.title}</strong> (${u.date})
+                    <button onclick="deleteUpdate(${idx})" style="float:right;">DELETE</button>
+                </div>
+            `).join('');
+        }
+        function loadAdminFiles() {
+            const tbody = document.getElementById('filesListTable');
+            if (DATABASE.files.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No files</td></tr>';
+                return;
+            }
+            tbody.innerHTML = DATABASE.files.map((f, idx) => `
+                <tr>
+                    <td>${f.name}</td><td>${f.type}</td><td>${f.date}</td>
+                    <td><button onclick="deleteFile(${idx})">DELETE</button></td>
+                </tr>
+            `).join('');
+        }
+        function loadAdminUsers() {
+            const tbody = document.getElementById('usersListTable');
+            if (DATABASE.users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No users</td></tr>';
+                return;
+            }
+            tbody.innerHTML = DATABASE.users.map(u => `
+                <tr><td>${u.username}</td><td>${u.email}</td><td>${(u.accounts || []).length}</td><td>${u.joinedDate}</td></tr>
+            `).join('');
+        }
+
+        function createUpdate(e) {
+            e.preventDefault();
+            const title = document.getElementById('updateTitle').value;
+            const desc = document.getElementById('updateDesc').value;
+            const file = document.getElementById('updateImage').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    DATABASE.updates.unshift({ id: Date.now(), title, description: desc, image: ev.target.result, date: new Date().toLocaleDateString() });
+                    saveData();
+                    loadUpdates();
+                    loadAdminUpdates();
+                    document.getElementById('updateTitle').value = '';
+                    document.getElementById('updateDesc').value = '';
+                    document.getElementById('updateImage').value = '';
+                    alert('Notification posted');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                DATABASE.updates.unshift({ id: Date.now(), title, description: desc, image: null, date: new Date().toLocaleDateString() });
+                saveData();
+                loadUpdates();
+                loadAdminUpdates();
+                document.getElementById('updateTitle').value = '';
+                document.getElementById('updateDesc').value = '';
+                alert('Notification posted');
+            }
+        }
+
+        function deleteUpdate(idx) {
+            if (confirm('Delete this notification?')) {
+                DATABASE.updates.splice(idx, 1);
+                saveData();
+                loadUpdates();
+                loadAdminUpdates();
+            }
+        }
+
+        function uploadFile(e) {
+            e.preventDefault();
+            const type = document.getElementById('fileType').value;
+            const file = document.getElementById('vpnFile').files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                DATABASE.files.push({
+                    id: Date.now(),
+                    name: file.name,
+                    type: type,
+                    date: new Date().toLocaleDateString(),
+                    size: (file.size / 1024).toFixed(2) + ' KB',
+                    content: ev.target.result
+                });
+                saveData();
+                loadAdminFiles();
+                document.getElementById('fileType').value = 'HTTP CUSTOM';
+                document.getElementById('vpnFile').value = '';
+                alert('File uploaded');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function deleteFile(idx) {
+            if (confirm('Delete file?')) {
+                DATABASE.files.splice(idx, 1);
+                saveData();
+                loadAdminFiles();
+            }
+        }
+
+        // ========== UTILITY ==========
+        function saveData() {
+            localStorage.setItem('configHubDB', JSON.stringify(DATABASE));
+        }
+    </script>
+</body>
+</html>
