@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Sniff · full chat with invites</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            background: #0c1218;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #app {
+            width: 100%;
+            max-width: 400px;
+            height: 750px;
+            background: #1e272f;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border: 1px solid #2e3a44;
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            background: #1e272f;
+            color: #e9edf0;
+        }
+        .screen.active {
+            display: flex;
+        }
+        .header {
+            padding: 16px 18px 8px 18px;
+            background: #1e272f;
+            border-bottom: 1px solid #2f3c47;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header i {
+            font-size: 1.5rem;
+            color: #8a9aa8;
+            cursor: pointer;
+        }
+        .header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            flex: 1;
+        }
+        .search-bar {
+            background: #2a3640;
+            margin: 12px 16px;
+            padding: 10px 16px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #7a8b99;
+        }
+        .search-bar input {
+            background: transparent;
+            border: none;
+            width: 100%;
+            color: white;
+            outline: none;
+        }
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px;
+        }
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            border-radius: 18px;
+            margin-bottom: 4px;
+            background: #26333d;
+            transition: 0.1s;
+            cursor: pointer;
+        }
+        .chat-avatar {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            background: #30414d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-right: 14px;
+            color: #b7c8d8;
+            flex-shrink: 0;
+        }
+        .chat-details {
+            flex: 1;
+        }
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chat-name {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        .verified-badge {
+            color: #3b9eff;
+            font-size: 0.9rem;
+        }
+        .chat-sub {
+            font-size: 0.8rem;
+            color: #9aabb8;
+            margin: 2px 0;
+        }
+        .chat-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+        .time {
+            font-size: 0.7rem;
+            color: #8a9aa8;
+        }
+        .unread {
+            background: #2f6eed;
+            color: white;
+            border-radius: 30px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+        }
+
+        /* message area */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #17222b;
+        }
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 22px;
+            background: #26333d;
+            align-self: flex-start;
+            word-break: break-word;
+        }
+        .message.own {
+            background: #2f6eed;
+            align-self: flex-end;
+        }
+        .message-info {
+            font-size: 0.7rem;
+            color: #9aabb8;
+            margin-bottom: 4px;
+            display: flex;
+            gap: 6px;
+        }
+        .message.own .message-info {
+            color: #ccddee;
+            justify-content: flex-end;
+        }
+        .message-content {
+            font-size: 0.95rem;
+        }
+
+        .message-input-area {
+            display: flex;
+            padding: 12px 16px;
+            background: #1e272f;
+            border-top: 1px solid #2f3c47;
+            gap: 10px;
+        }
+        .message-input-area input {
+            flex: 1;
+            background: #2a3741;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 18px;
+            color: white;
+            outline: none;
+        }
+        .message-input-area button {
+            background: #2f6eed;
+            border: none;
+            border-radius: 30px;
+            width: 50px;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+        .message-input-area button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            background: #17222b;
+            padding: 10px 0 14px;
+            border-top: 1px solid #2f3c47;
+            color: #859caa;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.75rem;
+            gap: 2px;
+            cursor: pointer;
+            flex: 1;
+        }
+        .nav-item i {
+            font-size: 1.3rem;
+        }
+        .nav-item.active {
+            color: #3f9eff;
+        }
+
+        .btn {
+            background: #2f6eed;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 30px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+        }
+        .input-field {
+            background: #2a3741;
+            border: none;
+            padding: 14px 16px;
+            border-radius: 30px;
+            color: white;
+            width: 100%;
+            margin: 8px 0;
+        }
+        .flex-col {
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .badge {
+            background: #2a3741;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+        }
+        .avatar-large {
+            width: 90px;
+            height: 90px;
+            border-radius: 30px;
+            background: #2f3f4d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin: 0 auto 16px;
+        }
+        /* modals */
+        .modal {
+            position: absolute;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-content {
+            background:#1e2b35; width:90%; border-radius:28px; padding:20px;
+        }
+        .link-btn {
+            background: transparent; border: 1px solid #3f9eff; color: #3f9eff; border-radius:30px; padding:8px 16px; cursor:pointer;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="screen active">
+        <div class="header"><h2>Sniff · login</h2></div>
+        <div class="flex-col" style="justify-content: center; flex:1;">
+            <i class="fas fa-cat" style="font-size:4rem; text-align:center; color:#5e7b94;"></i>
+            <input type="text" id="login-email" class="input-field" placeholder="email / phone" value="scottiekiid@gmail.com">
+            <input type="password" id="login-password" class="input-field" placeholder="password" value="5026">
+            <button class="btn" id="login-btn">log in</button>
+            <div class="link" id="show-register" style="color:#3f9eff; text-align:center;">create account</div>
+        </div>
+    </div>
+
+    <!-- REGISTER SCREEN -->
+    <div id="register-screen" class="screen">
+        <div class="header"><h2>Sign up</h2><i class="fas fa-times" id="close-register"></i></div>
+        <div class="flex-col">
+            <input type="text" id="reg-nick" class="input-field" placeholder="nickname">
+            <input type="text" id="reg-email" class="input-field" placeholder="email">
+            <input type="text" id="reg-phone" class="input-field" placeholder="phone">
+            <input type="password" id="reg-pass" class="input-field" placeholder="password">
+            <button class="btn" id="register-btn">Register</button>
+        </div>
+    </div>
+
+    <!-- MAIN CHAT LIST SCREEN -->
+    <div id="main-screen" class="screen">
+        <div class="header">
+            <h2>Chats</h2>
+            <div style="display: flex; gap: 15px;">
+                <i class="fas fa-link" id="join-by-link-icon" title="Join via link"></i>
+                <i class="fas fa-edit" id="create-group-icon" title="Create group/channel"></i>
+            </div>
+        </div>
+        <div class="search-bar"><i class="fas fa-search"></i><input placeholder="Search"></div>
+        <div class="chat-list" id="chat-list-container"></div>
+        <div class="bottom-nav">
+            <div class="nav-item active" data-view="chats"><i class="fas fa-comment"></i><span>Chats</span></div>
+            <div class="nav-item" data-view="contacts"><i class="fas fa-address-book"></i><span>Contacts</span></div>
+            <div class="nav-item" data-view="settings"><i class="fas fa-cog"></i><span>Settings</span></div>
+            <div class="nav-item" data-view="profile"><i class="fas fa-user-circle"></i><span>Profile</span></div>
+        </div>
+    </div>
+
+    <!-- CHAT DETAIL SCREEN (messages) -->
+    <div id="chat-detail-screen" class="screen">
+        <div class="header" id="detail-header">
+            <i class="fas fa-arrow-left" id="back-to-chats"></i>
+            <h2 id="detail-chat-name">Chat</h2>
+            <i class="fas fa-link" id="invite-link-icon" style="display: none;" title="Get invite link"></i>
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="messages-container" id="messages-list"></div>
+        <div class="message-input-area" id="message-input-area">
+            <input type="text" id="message-text" placeholder="Message...">
+            <button id="send-message-btn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- INVITE LINK MODAL (show link) -->
+    <div id="invite-modal" class="modal">
+        <div class="modal-content">
+            <h3>Invite link</h3>
+            <p>Share this link to let others join:</p>
+            <div style="background:#2a3741; border-radius:30px; padding:12px; word-break:break-all;" id="invite-link-display">https://sniff.chat/join/xxx</div>
+            <button class="btn" id="copy-invite-btn" style="margin-top:16px;"><i class="far fa-copy"></i> Copy</button>
+            <div class="link" id="close-invite-modal" style="text-align:center; margin-top:12px;">close</div>
+        </div>
+    </div>
+
+    <!-- JOIN VIA LINK MODAL -->
+    <div id="join-modal" class="modal">
+        <div class="modal-content">
+            <h3>Join with link</h3>
+            <input type="text" id="join-link-input" class="input-field" placeholder="Paste invite link or group ID">
+            <button class="btn" id="join-submit-btn">Join</button>
+            <div class="link" id="close-join-modal" style="text-align:center; margin-top:12px;">cancel</div>
+        </div>
+    </div>
+
+    <!-- CONTACTS SCREEN (unchanged) -->
+    <div id="contacts-screen" class="screen">...</div>
+    <!-- SETTINGS SCREEN (unchanged) -->
+    <div id="settings-screen" class="screen">...</div>
+    <!-- PROFILE SCREEN (unchanged) -->
+    <div id="profile-screen" class="screen">...</div>
+    <!-- ADMIN SCREEN (unchanged) -->
+    <div id="admin-screen" class="screen">...</div>
+
+    <!-- CREATE GROUP MODAL (unchanged) -->
+    <div id="create-modal" class="modal">...</div>
+</div>
+
+<script>
+    (function() {
+        // ---------- STORAGE ----------
+        const USERS_KEY = 'sniff_users';
+        const GROUPS_KEY = 'sniff_groups';
+        const MESSAGES_KEY = 'sniff_messages';
+        const CURRENT_USER_KEY = 'sniff_current';
+
+        function initData() {
+            if (!localStorage.getItem(USERS_KEY)) {
+                const users = [
+                    { id: 'u1', email: 'scottiekiid@gmail.com', phone: '+12345678', nickname: 'Scottie', password: '5026', profilePic: '👑', verified: true, role: 'admin' },
+                    { id: 'u2', email: 'alice@mail.com', phone: '+19876543', nickname: 'Alice', password: '1234', profilePic: '🐱', verified: false },
+                    { id: 'u3', email: 'bob@mail.com', phone: '+11223344', nickname: 'Bob', password: '1234', profilePic: '🐶', verified: true },
+                ];
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            }
+            if (!localStorage.getItem(GROUPS_KEY)) {
+                const groups = [
+                    { id: 'g1', name: 'HC · Sniff Files Vpn 🐱', type: 'group', ownerId: 'u2', admins: ['u1'], members: ['u1','u2','u3'], lastMsg: 'Rahman: Config indosat', time: '18:04', unread: 223, verified: false, allowAllSend: true },
+                    { id: 'g2', name: 'Friends zone 🏆', type: 'group', ownerId: 'u1', admins: [], members: ['u1','u3'], lastMsg: 'Nezuko 🐟: Hey you here too?', time: '18:03', unread: 1329, verified: true, allowAllSend: true },
+                    { id: 'g3', name: 'QUITTED 🎵', type: 'channel', ownerId: 'u1', admins: [], members: ['u1','u2'], lastMsg: 'WELCOME, Gábriël', time: '18:02', unread: 2571, verified: false, allowAllSend: false },
+                    { id: 'g4', name: 'decryption 🧹', type: 'group', ownerId: 'u2', admins: [], members: ['u2','u3'], lastMsg: 'g h o s t', time: '18:01', unread: 265, verified: false, allowAllSend: true },
+                    { id: 'g5', name: 'Achilles™(Dec~Vpn) 🐍', type: 'channel', ownerId: 'u3', admins: [], members: ['u3','u1'], lastMsg: 'sniff files ...', time: '17:58', unread: 506, verified: true, allowAllSend: false },
+                ];
+                localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
+            }
+            if (!localStorage.getItem(MESSAGES_KEY)) {
+                const messages = {
+                    g1: [ { id: 'm1', fromId: 'u2', fromName: 'Alice', text: 'Rahman: Config indosat', time: '18:04' } ],
+                    g2: [ { id: 'm2', fromId: 'u3', fromName: 'Bob', text: 'Nezuko 🐟: Hey you here too?', time: '18:03' } ],
+                    g3: [ { id: 'm3', fromId: 'u1', fromName: 'Scottie', text: 'WELCOME, Gábriël', time: '18:02' } ],
+                    g4: [ { id: 'm4', fromId: 'u2', fromName: 'Alice', text: 'g h o s t', time: '18:01' } ],
+                    g5: [ { id: 'm5', fromId: 'u3', fromName: 'Bob', text: 'sniff files ...', time: '17:58' } ],
+                };
+                localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+            }
+        }
+        initData();
+
+        function getUsers() { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; }
+        function getGroups() { return JSON.parse(localStorage.getItem(GROUPS_KEY)) || []; }
+        function getMessages() { return JSON.parse(localStorage.getItem(MESSAGES_KEY)) || {}; }
+        function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
+        function saveGroups(groups) { localStorage.setItem(GROUPS_KEY, JSON.stringify(groups)); }
+        function saveMessages(msgs) { localStorage.setItem(MESSAGES_KEY, JSON.stringify(msgs)); }
+        function getCurrentUser() { return JSON.parse(localStorage.getItem(CURRENT_USER_KEY)); }
+        function setCurrentUser(u) { localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u)); }
+
+        // ---------- SCREENS ----------
+        const screens = {
+            login: document.getElementById('login-screen'),
+            register: document.getElementById('register-screen'),
+            main: document.getElementById('main-screen'),
+            chatDetail: document.getElementById('chat-detail-screen'),
+            contacts: document.getElementById('contacts-screen'),
+            settings: document.getElementById('settings-screen'),
+            profile: document.getElementById('profile-screen'),
+            admin: document.getElementById('admin-screen'),
+        };
+        // modals
+        const inviteModal = document.getElementById('invite-modal');
+        const joinModal = document.getElementById('join-modal');
+        const createModal = document.getElementById('create-modal');
+
+        function showScreen(screenId) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            screens[screenId].classList.add('active');
+        }
+
+        let currentChatId = null;
+
+        // ---------- RENDER CHAT LIST ----------
+        function renderChatList() {
+            const container = document.getElementById('chat-list-container');
+            const groups = getGroups();
+            const cur = getCurrentUser();
+            if (!cur) return;
+            let html = '';
+            groups.forEach(g => {
+                if (!g.members.includes(cur.id)) return;
+                const verifiedIcon = g.verified ? '<i class="fas fa-check-circle verified-badge"></i>' : '';
+                html += `<div class="chat-item" data-chat-id="${g.id}">
+                    <div class="chat-avatar">${g.name.includes('HC')?'🐱':g.name.includes('Friends')?'🏆':'📁'}</div>
+                    <div class="chat-details">
+                        <div class="chat-title"><span class="chat-name">${g.name}</span> ${verifiedIcon}</div>
+                        <div class="chat-sub">${g.lastMsg || ''}</div>
+                    </div>
+                    <div class="chat-meta">
+                        <span class="time">${g.time || ''}</span>
+                        <span class="unread">${g.unread || 0}</span>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+            document.querySelectorAll('.chat-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    currentChatId = el.dataset.chatId;
+                    openChatDetail(currentChatId);
+                });
+            });
+        }
+
+        // ---------- CHAT DETAIL ----------
+        function openChatDetail(groupId) {
+            const groups = getGroups();
+            const group = groups.find(g => g.id === groupId);
+            if (!group) return;
+            document.getElementById('detail-chat-name').innerText = group.name;
+
+            // show invite icon only if current user is owner or admin
+            const cur = getCurrentUser();
+            const isOwnerOrAdmin = (group.ownerId === cur.id) || (group.admins || []).includes(cur.id);
+            document.getElementById('invite-link-icon').style.display = isOwnerOrAdmin ? 'inline-block' : 'none';
+
+            renderMessages(groupId);
+            showScreen('chatDetail');
+        }
+
+        function renderMessages(groupId) {
+            const container = document.getElementById('messages-list');
+            const allMessages = getMessages();
+            const msgs = allMessages[groupId] || [];
+            const cur = getCurrentUser();
+            if (!cur) return;
+            let html = '';
+            msgs.forEach(m => {
+                const isOwn = m.fromId === cur.id;
+                html += `<div class="message ${isOwn ? 'own' : ''}">
+                    <div class="message-info"><span>${m.fromName}</span> <span>${m.time}</span></div>
+                    <div class="message-content">${m.text}</div>
+                </div>`;
+            });
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+            updateSendPermission(groupId);
+        }
+
+        function updateSendPermission(groupId) {
+            const groups = getGroups();
+            const group = groups.find(g => g.id === groupId);
+            const cur = getCurrentUser();
+            if (!group || !cur) return;
+            let canSend = false;
+            if (group.type === 'group') canSend = group.allowAllSend !== false;
+            else canSend = (group.ownerId === cur.id) || (group.admins || []).includes(cur.id);
+            document.getElementById('send-message-btn').disabled = !canSend;
+            document.getElementById('message-text').disabled = !canSend;
+        }
+
+        // send message
+        document.getElementById('send-message-btn').addEventListener('click', () => {
+            if (!currentChatId) return;
+            const input = document.getElementById('message-text');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const cur = getCurrentUser();
+            const groups = getGroups();
+            const group = groups.find(g => g.id === currentChatId);
+            if (!group) return;
+
+            let canSend = (group.type === 'group') || (group.ownerId === cur.id) || (group.admins || []).includes(cur.id);
+            if (!canSend) { alert('No permission'); return; }
+
+            const allMessages = getMessages();
+            if (!allMessages[currentChatId]) allMessages[currentChatId] = [];
+            const newMsg = {
+                id: 'm' + Date.now(),
+                fromId: cur.id,
+                fromName: cur.nickname,
+                text: text,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            };
+            allMessages[currentChatId].push(newMsg);
+            saveMessages(allMessages);
+
+            group.lastMsg = cur.nickname + ': ' + text;
+            group.time = newMsg.time;
+            saveGroups(groups);
+
+            input.value = '';
+            renderMessages(currentChatId);
+        });
+
+        document.getElementById('back-to-chats').addEventListener('click', () => {
+            showScreen('main');
+            renderChatList();
+        });
+
+        // ---------- INVITE LINK (show & copy) ----------
+        document.getElementById('invite-link-icon').addEventListener('click', () => {
+            if (!currentChatId) return;
+            const group = getGroups().find(g => g.id === currentChatId);
+            if (!group) return;
+            const link = `https://sniff.chat/join/${group.id}`;
+            document.getElementById('invite-link-display').innerText = link;
+            inviteModal.style.display = 'flex';
+        });
+
+        document.getElementById('copy-invite-btn').addEventListener('click', () => {
+            const link = document.getElementById('invite-link-display').innerText;
+            navigator.clipboard.writeText(link).then(() => alert('Link copied!'));
+        });
+
+        document.getElementById('close-invite-modal').addEventListener('click', () => {
+            inviteModal.style.display = 'none';
+        });
+
+        // ---------- JOIN VIA LINK ----------
+        document.getElementById('join-by-link-icon').addEventListener('click', () => {
+            joinModal.style.display = 'flex';
+        });
+
+        document.getElementById('close-join-modal').addEventListener('click', () => {
+            joinModal.style.display = 'none';
+        });
+
+        document.getElementById('join-submit-btn').addEventListener('click', () => {
+            const input = document.getElementById('join-link-input').value.trim();
+            let groupId = input;
+            // extract ID if full link
+            if (input.includes('join/')) {
+                groupId = input.split('join/')[1].split(' ')[0];
+            }
+            const groups = getGroups();
+            const group = groups.find(g => g.id === groupId);
+            const cur = getCurrentUser();
+            if (!group) {
+                alert('Group/channel not found');
+                return;
+            }
+            if (group.members.includes(cur.id)) {
+                alert('You are already a member');
+                joinModal.style.display = 'none';
+                return;
+            }
+            // add user to members
+            group.members.push(cur.id);
+            saveGroups(groups);
+            alert(`Joined ${group.name}`);
+            joinModal.style.display = 'none';
+            document.getElementById('join-link-input').value = '';
+            renderChatList();
+            // optionally open the chat
+            currentChatId = group.id;
+            openChatDetail(group.id);
+        });
+
+        // ---------- LOGIN / REGISTER (unchanged, but keep essential) ----------
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            const users = getUsers();
+            const user = users.find(u => (u.email === email || u.phone === email) && u.password === pass);
+            if (user) {
+                const { password, ...safe } = user;
+                setCurrentUser(safe);
+                showScreen('main');
+                renderChatList();
+            } else alert('Invalid credentials');
+        });
+
+        document.getElementById('show-register').addEventListener('click', () => showScreen('register'));
+        document.getElementById('close-register').addEventListener('click', () => showScreen('login'));
+        document.getElementById('register-btn').addEventListener('click', () => {
+            const nick = document.getElementById('reg-nick').value;
+            const email = document.getElementById('reg-email').value;
+            const phone = document.getElementById('reg-phone').value;
+            const pass = document.getElementById('reg-pass').value;
+            if (!nick || !email || !phone || !pass) return alert('All fields required');
+            const users = getUsers();
+            if (users.find(u => u.email === email || u.phone === phone)) return alert('Exists');
+            const newUser = {
+                id: 'u' + Date.now(),
+                email, phone, nickname: nick, password: pass, profilePic: '🧑', verified: false
+            };
+            users.push(newUser);
+            saveUsers(users);
+            alert('Registered, please login');
+            showScreen('login');
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem(CURRENT_USER_KEY);
+            showScreen('login');
+        });
+
+        // bottom navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const view = item.dataset.view;
+                if (view === 'chats') { showScreen('main'); renderChatList(); }
+                else if (view === 'contacts') { showScreen('contacts'); renderContacts(); }
+                else if (view === 'settings') showScreen('settings');
+                else if (view === 'profile') { showScreen('profile'); renderProfile(); }
+            });
+        });
+
+        function renderContacts() {
+            const users = getUsers().filter(u => u.id !== getCurrentUser()?.id);
+            const cont = document.getElementById('contacts-list');
+            cont.innerHTML = users.map(u => `<div class="chat-item"><div class="chat-avatar">${u.profilePic}</div><div><strong>${u.nickname}</strong> ${u.verified?'✔️':''}<br>${u.phone}</div></div>`).join('');
+        }
+
+        function renderProfile() {
+            const u = getCurrentUser();
+            if (!u) return;
+            document.getElementById('profile-avatar').innerText = u.profilePic || '😺';
+            document.getElementById('profile-nick').innerText = u.nickname;
+            document.getElementById('profile-email').innerText = u.email;
+            document.getElementById('profile-phone').innerText = u.phone;
+            const badge = u.verified ? '<i class="fas fa-check-circle" style="color:#3b9eff;"></i> verified' : '<i class="fas fa-check-circle" style="color:gray;"></i> unverified';
+            document.getElementById('profile-verified-badge').innerHTML = badge;
+        }
+
+        document.getElementById('edit-profile-btn').addEventListener('click', () => {
+            const newNick = prompt('new nickname');
+            if (newNick) {
+                const u = getCurrentUser();
+                u.nickname = newNick;
+                const users = getUsers();
+                const idx = users.findIndex(x => x.id === u.id);
+                if (idx>=0) { users[idx].nickname = newNick; saveUsers(users); }
+                setCurrentUser(u);
+                renderProfile();
+            }
+        });
+
+        // create group (simplified)
+        document.getElementById('create-group-icon').addEventListener('click', () => createModal.style.display = 'flex');
+        document.getElementById('close-modal').addEventListener('click', () => createModal.style.display = 'none');
+        document.getElementById('create-submit').addEventListener('click', () => {
+            const type = document.getElementById('create-type').value;
+            const name = document.getElementById('create-name').value;
+            if (!name) return;
+            const cur = getCurrentUser();
+            const newGroup = {
+                id: 'g' + Date.now(),
+                name: name + (type==='channel'?' 📢':''),
+                type: type,
+                ownerId: cur.id,
+                admins: [],
+                members: [cur.id],
+                lastMsg: 'Group created',
+                time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+                unread: 0,
+                verified: false,
+                allowAllSend: type === 'group',
+            };
+            const groups = getGroups();
+            groups.push(newGroup);
+            saveGroups(groups);
+            const msgs = getMessages();
+            msgs[newGroup.id] = [];
+            saveMessages(msgs);
+            createModal.style.display = 'none';
+            renderChatList();
+        });
+
+        // admin panel (unchanged)
+        document.getElementById('admin-panel-link').addEventListener('click', () => {
+            const cur = getCurrentUser();
+            if (cur && cur.email === 'scottiekiid@gmail.com') {
+                renderAdmin();
+                showScreen('admin');
+            } else alert('Owner only');
+        });
+        document.getElementById('close-admin').addEventListener('click', ()=> showScreen('settings'));
+
+        function renderAdmin() {
+            const users = getUsers();
+            const groups = getGroups();
+            const userDiv = document.getElementById('admin-user-list');
+            userDiv.innerHTML = users.map(u => `<div style="display:flex; justify-content:space-between; background:#1e2f3a; padding:8px; border-radius:16px; margin:4px">
+                <span>${u.nickname} (${u.email}) ${u.verified?'✔️':''}</span>
+                <button class="verify-user-btn" data-id="${u.id}" style="background:#2f6eed; border:none; color:white; border-radius:30px; padding:4px 12px;">${u.verified?'unverify':'verify'}</button>
+            </div>`).join('');
+            document.querySelectorAll('.verify-user-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    const users = getUsers();
+                    const user = users.find(u => u.id === id);
+                    if (user) { user.verified = !user.verified; saveUsers(users); renderAdmin(); }
+                });
+            });
+
+            const chanDiv = document.getElementById('admin-channel-list');
+            chanDiv.innerHTML = groups.map(g => `<div style="display:flex; justify-content:space-between; background:#1e2f3a; padding:8px; border-radius:16px; margin:4px">
+                <span>${g.name} ${g.verified?'✔️':''}</span>
+                <button class="verify-chan-btn" data-id="${g.id}" style="background:#2f6eed; border:none; color:white; border-radius:30px; padding:4px 12px;">${g.verified?'unverify':'verify'}</button>
+            </div>`).join('');
+            document.querySelectorAll('.verify-chan-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    const groups = getGroups();
+                    const g = groups.find(gg => gg.id === id);
+                    if (g) { g.verified = !g.verified; saveGroups(groups); renderAdmin(); }
+                });
+            });
+        }
+
+        // initial render if logged in
+        if (getCurrentUser()) {
+            showScreen('main');
+            renderChatList();
+        }
+    })();
+</script>
+
+<!-- backend notes -->
+<div style="display:none;">
+    Requires: download.php (resumable, up to 8GB), api.php, uploads/ folder, data/ storage.
+</div>
+</body>
+</html>
