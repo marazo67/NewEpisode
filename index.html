@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H&M · Cloud Hub</title>
+    <!-- Font Awesome 6 (modern icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ===== ENHANCED NEXT-LEVEL STYLE – KEEPING BLACK/CYAN THEME ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #001a4d;
+            --secondary: #003d99;
+            --accent: #00d4ff;
+            --glow: 0 0 15px rgba(0, 212, 255, 0.6);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 1s ease;
+        }
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-content {
+            text-align: center;
+        }
+        .loading-content h1 {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 20px var(--accent));
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(0,212,255,0.3);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            margin: 30px auto;
+            animation: spin 1s infinite linear;
+            box-shadow: var(--glow);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== DASHBOARD ===== */
+        .dashboard-page {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+            padding-bottom: 100px;
+            background: #000000;
+        }
+        .dashboard-page.active {
+            display: flex;
+        }
+
+        .top-bar {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 5px 20px rgba(0,212,255,0.2);
+        }
+
+        .top-bar h1 {
+            font-size: 22px;
+            font-weight: 700;
+            transition: all 0.5s ease;
+            text-shadow: var(--glow);
+        }
+
+        .top-icons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: var(--accent);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(0,212,255,0.2);
+        }
+        .icon-btn:hover {
+            background: rgba(0, 212, 255, 0.3);
+            transform: scale(1.1);
+            box-shadow: var(--glow);
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 700px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .page-section {
+            display: none;
+        }
+        .page-section.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .page-section h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 0 8px var(--accent);
+        }
+
+        /* ===== POSTS ===== */
+        .post {
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: 0.3s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+        }
+        .post:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 25px rgba(0,212,255,0.3);
+        }
+        .post-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #000;
+            box-shadow: 0 0 15px var(--accent);
+        }
+        .post-info h3 { font-size: 14px; font-weight: 700; }
+        .post-info p { font-size: 11px; opacity: 0.6; }
+        .post-content { margin-bottom: 12px; line-height: 1.6; font-size: 14px; }
+        .post-image { width: 100%; border-radius: 12px; max-height: 300px; object-fit: cover; border: 1px solid var(--accent); }
+
+        /* ===== FILES ===== */
+        .vpn-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .vpn-card {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.25);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .vpn-card:hover {
+            background: rgba(0,212,255,0.18);
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: var(--glow);
+        }
+        .vpn-card-icon { font-size: 28px; margin-bottom: 8px; color: var(--accent); }
+        .vpn-card-name { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+        .file-item {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 14px;
+            padding: 16px 12px;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            transition: 0.3s;
+        }
+        .file-item:hover {
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+        .file-item-icon { font-size: 28px; margin-bottom: 8px; color: var(--accent); }
+        .file-item-name { font-size: 11px; font-weight: 600; margin-bottom: 8px; word-break: break-word; }
+        .download-btn {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: var(--accent);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: 0.3s;
+        }
+        .download-btn:hover { 
+            background: rgba(0,212,255,0.3);
+            box-shadow: 0 0 15px var(--accent);
+        }
+
+        /* ===== ACCOUNTS ===== */
+        .account-card {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+        .account-info h3 { font-size: 13px; font-weight: 700; }
+        .account-info p { font-size: 11px; opacity: 0.7; }
+        .account-actions { display: flex; gap: 8px; }
+        .account-actions button {
+            padding: 6px 12px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: var(--accent);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: 0.3s;
+        }
+        .account-actions button:hover {
+            background: rgba(0,212,255,0.3);
+            box-shadow: 0 0 10px var(--accent);
+        }
+        .add-account-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+            border: none;
+            border-radius: 30px;
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 0 20px var(--accent);
+            transition: 0.3s;
+        }
+        .add-account-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px var(--accent);
+        }
+
+        /* ===== ADS MARQUEE ===== */
+        .ads-marquee-container {
+            width: 100%;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1.5px solid var(--accent);
+            border-radius: 50px;
+            padding: 12px 0;
+            margin-bottom: 20px;
+            box-shadow: 0 0 25px var(--accent);
+            backdrop-filter: blur(8px);
+        }
+        .ads-marquee {
+            display: flex;
+            gap: 30px;
+            animation: scrollAds 25s linear infinite;
+            width: max-content;
+        }
+        .ads-marquee:hover {
+            animation-play-state: paused;
+        }
+        .marquee-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,212,255,0.15);
+            border: 1px solid var(--accent);
+            border-radius: 40px;
+            padding: 8px 24px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: 0.3s;
+            box-shadow: 0 0 10px rgba(0,212,255,0.3);
+        }
+        .marquee-item:hover {
+            background: rgba(0,212,255,0.3);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px var(--accent);
+        }
+        .marquee-icon { font-size: 22px; }
+        .marquee-text { font-size: 14px; font-weight: 600; }
+        @keyframes scrollAds {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* ===== ROTATING AD CONTAINER ===== */
+        #rotating-ad-container {
+            margin: 20px 0;
+            text-align: center;
+            min-height: 100px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 20px;
+            padding: 15px;
+            border: 1.5px dashed var(--accent);
+            box-shadow: inset 0 0 20px rgba(0,212,255,0.2);
+        }
+
+        /* ===== SETTINGS ===== */
+        .settings-group {
+            background: rgba(0,212,255,0.1);
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(8px);
+        }
+        .settings-group h3 { 
+            color: var(--accent); 
+            margin-bottom: 12px; 
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,212,255,0.1);
+            font-size: 13px;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .toggle {
+            width: 44px;
+            height: 24px;
+            background: rgba(0,212,255,0.25);
+            border-radius: 30px;
+            cursor: pointer;
+            position: relative;
+            transition: 0.3s;
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+        .toggle.active { background: var(--accent); }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            top: 1px;
+            left: 2px;
+            transition: 0.3s;
+            box-shadow: 0 1px 5px black;
+        }
+        .toggle.active::after { left: 22px; }
+        .privacy-text { 
+            background: rgba(0,212,255,0.08); 
+            border-radius: 14px; 
+            padding: 16px; 
+            font-size: 13px;
+            border: 1px solid rgba(0,212,255,0.2);
+        }
+        .settings-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: var(--accent);
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+        .settings-btn:hover {
+            background: rgba(0,212,255,0.3);
+            box-shadow: var(--glow);
+        }
+        .logout-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,100,100,0.15);
+            border: 1.5px solid rgba(255,100,100,0.3);
+            color: #ff9999;
+            border-radius: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        .logout-btn:hover {
+            background: rgba(255,100,100,0.25);
+            box-shadow: 0 0 15px #ff9999;
+        }
+
+        /* ===== FLOATING NAVIGATION ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background: #000000cc;
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 212, 255, 0.5);
+            border-radius: 60px;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 8px;
+            z-index: 999;
+            box-shadow: 0 10px 40px rgba(0,212,255,0.5);
+            transition: 0.3s;
+        }
+        .bottom-nav:hover {
+            box-shadow: 0 15px 60px rgba(0,212,255,0.8);
+            transform: translateX(-50%) translateY(-3px);
+        }
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            cursor: pointer;
+            color: rgba(255,255,255,0.8);
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 40px;
+            transition: 0.3s;
+        }
+        .nav-item.active {
+            color: var(--accent);
+            background: rgba(0,212,255,0.2);
+            transform: scale(1.1);
+            text-shadow: 0 0 10px var(--accent);
+        }
+        .nav-item:hover {
+            color: var(--accent);
+            background: rgba(0,212,255,0.15);
+        }
+        .nav-icon { font-size: 24px; }
+
+        /* ===== ADMIN PANEL ===== */
+        .admin-page {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+            background: #000000;
+        }
+        .admin-page.active { display: flex; }
+        .admin-sidebar {
+            background: #111111;
+            border-right: 2px solid rgba(0,212,255,0.25);
+            padding: 20px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 220px;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 5px 0 30px rgba(0,212,255,0.1);
+        }
+        .admin-sidebar h2 { 
+            color: var(--accent); 
+            margin-bottom: 20px; 
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .admin-menu { list-style: none; }
+        .admin-menu li { margin-bottom: 8px; }
+        .admin-menu button {
+            width: 100%;
+            text-align: left;
+            padding: 12px;
+            background: rgba(0,212,255,0.08);
+            border: 1px solid rgba(0,212,255,0.15);
+            color: rgba(255,255,255,0.9);
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .admin-menu button:hover,
+        .admin-menu button.active {
+            background: rgba(0,212,255,0.2);
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 15px var(--accent);
+        }
+        .admin-content {
+            margin-left: 220px;
+            flex: 1;
+            padding: 25px;
+            background: #000000;
+        }
+        .admin-header { 
+            margin-bottom: 25px; 
+            border-bottom: 2px solid rgba(0,212,255,0.2); 
+            padding-bottom: 15px; 
+        }
+        .admin-header h1 { 
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        .admin-card {
+            background: #111111;
+            border: 1.5px solid rgba(0,212,255,0.2);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .admin-card h3 { 
+            color: var(--accent); 
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .admin-btn {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+            border: none;
+            border-radius: 30px;
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-right: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 15px var(--accent);
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .table thead { background: rgba(0,212,255,0.1); }
+        .table th, .table td { 
+            padding: 10px; 
+            border-bottom: 1px solid rgba(0,212,255,0.2);
+        }
+        .table button {
+            background: none;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 20px;
+            padding: 4px 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ===== MODALS ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(12px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #111111;
+            border: 2px solid var(--accent);
+            border-radius: 30px;
+            padding: 35px;
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 0 50px var(--accent);
+        }
+        .modal-content h2 { 
+            color: var(--accent); 
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .close-modal {
+            position: absolute;
+            top: 15px; right: 20px;
+            background: none; border: none;
+            color: var(--accent);
+            font-size: 24px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .close-modal:hover {
+            transform: rotate(90deg);
+            text-shadow: var(--glow);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: var(--accent);
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.5);
+            border: 1.5px solid rgba(0,212,255,0.3);
+            border-radius: 30px;
+            color: white;
+            font-size: 13px;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #0099cc);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 40px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 14px;
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar { width: 180px; }
+            .admin-content { margin-left: 180px; }
+        }
+        @media (max-width: 480px) {
+            .admin-sidebar { width: 100%; height: auto; position: relative; }
+            .admin-content { margin-left: 0; }
+        }
+
+        /* Income display */
+        .income-box {
+            background: rgba(0,212,255,0.15);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1.5px solid var(--accent);
+        }
+        .income-box h3 { color: #fff; }
+        .income-amount { font-size: 40px; font-weight: 800; color: #00ffaa; text-shadow: 0 0 20px #00ffaa; }
+        .withdraw-btn {
+            background: #00d4ff;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-weight: bold;
+            margin-top: 10px;
+            cursor: pointer;
+            box-shadow: 0 0 15px #00d4ff;
+        }
+    </style>
+    <!-- Google AdSense (optional – replace with your own code) -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <h1>H&M</h1>
+            <div class="loading-spinner"></div>
+            <p>Establishing secured connection...</p>
+            <p>🔒 AES-256 ENCRYPTION ACTIVE</p>
+        </div>
+    </div>
+
+    <!-- DASHBOARD PAGE -->
+    <div class="dashboard-page" id="dashboardPage">
+        <div class="top-bar">
+            <h1 id="rotatingTitle">H&M</h1>
+            <div class="top-icons">
+                <button class="icon-btn" onclick="showNotifications()"><i class="fas fa-bell"></i></button>
+                <button class="icon-btn" onclick="adminAccess()"><i class="fas fa-lock"></i></button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- ADS MARQUEE (moving left) -->
+            <div class="ads-marquee-container" id="adsMarqueeContainer">
+                <div class="ads-marquee" id="adsMarquee">
+                    <!-- Ads will be injected here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- HOME (UPDATES / NOTIFICATIONS) -->
+            <div id="home-section" class="page-section active">
+                <!-- ROTATING ADSTERRA AD (via ad.php) -->
+                <div id="rotating-ad-container">
+                    <!-- Ad content will be loaded here from ad.php every 15 seconds -->
+                </div>
+
+                <h2><i class="fas fa-newspaper"></i> Latest Updates & Notifications</h2>
+                <div id="updatesList"></div>
+            </div>
+
+            <!-- FILES -->
+            <div id="files-section" class="page-section">
+                <h2><i class="fas fa-folder-open"></i> Download VPN Files</h2>
+                <div class="vpn-types" id="vpnTypesContainer"></div>
+                <div id="selectedVpnFiles"></div>
+            </div>
+
+            <!-- PROFILE / ACCOUNTS -->
+            <div id="profile-section" class="page-section">
+                <h2><i class="fas fa-user-circle"></i> My Accounts</h2>
+                <button class="add-account-btn" onclick="openAddAccountModal()"><i class="fas fa-plus-circle"></i> ADD NEW ACCOUNT</button>
+                <div id="accountsList"></div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div id="settings-section" class="page-section">
+                <h2><i class="fas fa-sliders-h"></i> Settings & Privacy</h2>
+                <div class="settings-group">
+                    <h3><i class="fas fa-shield-alt"></i> Privacy Settings</h3>
+                    <div class="settings-item"><span>Profile Visibility</span><div class="toggle active" onclick="toggleSetting(this)"></div></div>
+                    <div class="settings-item"><span>Show Online Status</span><div class="toggle active" onclick="toggleSetting(this)"></div></div>
+                    <div class="settings-item"><span>Allow Notifications</span><div class="toggle active" onclick="toggleSetting(this)"></div></div>
+                </div>
+                <div class="settings-group">
+                    <h3><i class="fas fa-file-contract"></i> Privacy Promise</h3>
+                    <div class="privacy-text">Your data is safe with us. We never sell your information.</div>
+                </div>
+                <div class="settings-group">
+                    <h3><i class="fas fa-user-cog"></i> Account Actions</h3>
+                    <button class="settings-btn" onclick="editProfile()"><i class="fas fa-pen"></i> EDIT PROFILE</button>
+                    <button class="settings-btn" onclick="changePassword()"><i class="fas fa-key"></i> CHANGE PASSWORD</button>
+                    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> LOGOUT</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLOATING NAVIGATION -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="navigateTo(event, 'home')"><span class="nav-icon"><i class="fas fa-home"></i></span><span>HOME</span></div>
+            <div class="nav-item" onclick="navigateTo(event, 'files')"><span class="nav-icon"><i class="fas fa-folder"></i></span><span>FILES</span></div>
+            <div class="nav-item" onclick="navigateTo(event, 'profile')"><span class="nav-icon"><i class="fas fa-user"></i></span><span>ACCOUNTS</span></div>
+            <div class="nav-item" onclick="navigateTo(event, 'settings')"><span class="nav-icon"><i class="fas fa-cog"></i></span><span>SETTINGS</span></div>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div class="admin-page" id="adminPage">
+        <div class="admin-sidebar">
+            <h2><i class="fas fa-lock"></i> ADMIN PANEL</h2>
+            <ul class="admin-menu">
+                <li><button class="active" onclick="showAdminSection(event, 'admin-dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-posts')"><i class="fas fa-bullhorn"></i> Notifications</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-files')"><i class="fas fa-upload"></i> Files</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-ads')"><i class="fas fa-ad"></i> Ads</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-users')"><i class="fas fa-users"></i> Users</button></li>
+                <li><button onclick="showAdminSection(event, 'admin-income')"><i class="fas fa-dollar-sign"></i> Income</button></li>
+                <li><button onclick="logoutAdmin()" style="background: rgba(255,100,100,0.15);"><i class="fas fa-sign-out-alt"></i> LOGOUT</button></li>
+            </ul>
+        </div>
+        <div class="admin-content">
+            <div class="admin-header"><h1><i class="fas fa-tachometer-alt"></i> ADMIN DASHBOARD</h1></div>
+
+            <!-- Dashboard -->
+            <div class="admin-section active" id="admin-dashboard-section">
+                <div class="admin-card">
+                    <h3><i class="fas fa-chart-line"></i> System Stats</h3>
+                    <table class="table">
+                        <tr><th>Metric</th><th>Value</th></tr>
+                        <tr><td>Total Users</td><td id="statUsers">0</td></tr>
+                        <tr><td>Total Notifications</td><td id="statUpdates">0</td></tr>
+                        <tr><td>Total Files</td><td id="statFiles">0</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="admin-section" id="admin-posts-section">
+                <div class="admin-card">
+                    <h3><i class="fas fa-pen"></i> Create Notification</h3>
+                    <form onsubmit="createUpdate(event)">
+                        <div class="form-group"><label>Title</label><input type="text" id="updateTitle" required></div>
+                        <div class="form-group"><label>Description</label><textarea id="updateDesc" required></textarea></div>
+                        <div class="form-group"><label>Image (optional)</label><input type="file" id="updateImage" accept="image/*"></div>
+                        <button type="submit" class="admin-btn"><i class="fas fa-paper-plane"></i> POST NOTIFICATION</button>
+                    </form>
+                </div>
+                <div class="admin-card">
+                    <h3><i class="fas fa-list"></i> Recent Notifications</h3>
+                    <div id="adminUpdatesList"></div>
+                </div>
+            </div>
+
+            <!-- Files -->
+            <div class="admin-section" id="admin-files-section">
+                <div class="admin-card">
+                    <h3><i class="fas fa-cloud-upload-alt"></i> Upload File</h3>
+                    <form onsubmit="uploadFile(event)">
+                        <div class="form-group"><label>Type</label>
+                            <select id="fileType">
+                                <option value="HTTP CUSTOM">HTTP CUSTOM</option><option value="TLS TUNNEL">TLS TUNNEL</option>
+                                <option value="NPV TUNNEL">NPV TUNNEL</option><option value="DARK TUNNEL">DARK TUNNEL</option>
+                                <option value="ZIVPN">ZIVPN</option><option value="HA TUNNEL">HA TUNNEL</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>File</label><input type="file" id="vpnFile" required></div>
+                        <button type="submit" class="admin-btn"><i class="fas fa-upload"></i> UPLOAD</button>
+                    </form>
+                </div>
+                <div class="admin-card">
+                    <h3><i class="fas fa-database"></i> Uploaded Files</h3>
+                    <table class="table"><thead><tr><th>Name</th><th>Type</th><th>Date</th><th>Downloads</th><th>Action</th></tr></thead><tbody id="filesListTable"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Ads -->
+            <div class="admin-section" id="admin-ads-section">
+                <div class="admin-card">
+                    <h3><i class="fas fa-plus-circle"></i> Add Ad</h3>
+                    <form onsubmit="addAd(event)">
+                        <div class="form-group"><label>Type</label><input type="text" id="adType" placeholder="Telegram" required></div>
+                        <div class="form-group"><label>Link</label><input type="url" id="adLink" required></div>
+                        <div class="form-group"><label>Icon</label><input type="text" id="adIcon" value="✈️"></div>
+                        <div class="form-group"><label>Message</label><input type="text" id="adMessage" value="Click to join"></div>
+                        <div class="form-group"><label>Active</label><select id="adActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+                        <button type="submit" class="admin-btn"><i class="fas fa-save"></i> ADD</button>
+                    </form>
+                </div>
+                <div class="admin-card">
+                    <h3><i class="fas fa-table"></i> Current Ads</h3>
+                    <table class="table"><thead><tr><th>Icon</th><th>Type</th><th>Message</th><th>Link</th><th>Active</th><th>Action</th></tr></thead><tbody id="adsListTable"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Users -->
+            <div class="admin-section" id="admin-users-section">
+                <div class="admin-card">
+                    <h3><i class="fas fa-users"></i> Registered Users</h3>
+                    <table class="table"><thead><tr><th>Username</th><th>Email</th><th>Accounts</th><th>Joined</th></tr></thead><tbody id="usersListTable"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Income -->
+            <div class="admin-section" id="admin-income-section">
+                <div class="admin-card">
+                    <h3><i class="fas fa-coins"></i> Revenue & Withdrawals</h3>
+                    <div class="income-box">
+                        <h3>Current Balance</h3>
+                        <div class="income-amount" id="incomeBalance">$0.00</div>
+                        <p>Total Downloads: <span id="totalDownloads">0</span></p>
+                        <button class="withdraw-btn" onclick="withdrawEarnings()"><i class="fas fa-hand-holding-usd"></i> Request Withdrawal</button>
+                        <p style="margin-top:10px; opacity:0.7;">Minimum withdrawal: $20</p>
+                    </div>
+                    <h4>Recent Withdrawals</h4>
+                    <table class="table">
+                        <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+                        <tbody id="withdrawalsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeAdminModal()"><i class="fas fa-times"></i></button>
+            <h2><i class="fas fa-lock"></i> Admin Access</h2>
+            <form onsubmit="verifyAdmin(event)">
+                <div class="form-group"><label>PIN</label><input type="password" id="adminPin" placeholder="Enter PIN" maxlength="4" required></div>
+                <div class="form-group"><label>Password</label><input type="password" id="adminPassword" placeholder="Enter password" required></div>
+                <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> ACCESS</button>
+            </form>
+        </div>
+    </div>
+    <div class="modal" id="addAccountModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeAddAccountModal()"><i class="fas fa-times"></i></button>
+            <h2><i class="fas fa-user-plus"></i> Add Account</h2>
+            <form onsubmit="addAccount(event)">
+                <div class="form-group"><label>Username</label><input type="text" id="newAccountUsername" required></div>
+                <div class="form-group"><label>Email</label><input type="email" id="newAccountEmail" required></div>
+                <button type="submit" class="btn"><i class="fas fa-check"></i> CREATE</button>
+            </form>
+        </div>
+    </div>
+    <div class="modal" id="editAdModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeEditAdModal()"><i class="fas fa-times"></i></button>
+            <h2><i class="fas fa-edit"></i> Edit Ad</h2>
+            <form onsubmit="updateAd(event)">
+                <input type="hidden" id="editAdId">
+                <div class="form-group"><label>Type</label><input type="text" id="editAdType" required></div>
+                <div class="form-group"><label>Link</label><input type="url" id="editAdLink" required></div>
+                <div class="form-group"><label>Icon</label><input type="text" id="editAdIcon" required></div>
+                <div class="form-group"><label>Message</label><input type="text" id="editAdMessage" required></div>
+                <div class="form-group"><label>Active</label><select id="editAdActive"><option value="true">Yes</option><option value="false">No</option></select></div>
+                <button type="submit" class="btn"><i class="fas fa-sync-alt"></i> UPDATE</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'api.php';
+        const DOWNLOAD_URL = 'download.php?file=';
+
+        let currentUser = null;
+        let filesData = [];
+
+        setTimeout(() => {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('dashboardPage').classList.add('active');
+        }, 3000);
+
+        async function apiRequest(action, data = {}) {
+            const formData = new FormData();
+            formData.append('action', action);
+            for (let key in data) {
+                const val = data[key];
+                if (val instanceof File) {
+                    formData.append(key, val);
+                } else if (typeof val === 'object' && val !== null) {
+                    formData.append(key, JSON.stringify(val));
+                } else {
+                    formData.append(key, val);
+                }
+            }
+            const res = await fetch(API_URL, { method: 'POST', body: formData });
+            const result = await res.json();
+            if (result.error) throw new Error(result.error);
+            return result;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await loadCurrentUser();
+                await loadUpdates();
+                await loadFiles();
+                await loadAccounts();
+                await loadAds();
+                initVpnTypes();
+                startTitleRotation();
+                updateAdminStats();
+                startAdRotation(); // Start rotating ads from ad.php
+            } catch (err) {
+                console.error('Init error:', err);
+            }
+        });
+
+        async function loadCurrentUser() {
+            const res = await apiRequest('getCurrentUser');
+            currentUser = res.user;
+        }
+
+        async function loadUpdates() {
+            const res = await apiRequest('getUpdates');
+            const list = document.getElementById('updatesList');
+            if (!res.updates?.length) {
+                list.innerHTML = '<p style="opacity:0.7;">No notifications yet</p>';
+                return;
+            }
+            list.innerHTML = res.updates.map(u => `
+                <div class="post">
+                    <div class="post-header">
+                        <div class="post-avatar"><i class="fas fa-bullhorn"></i></div>
+                        <div class="post-info"><h3>Scottie</h3><p>${u.date}</p></div>
+                    </div>
+                    <div class="post-content"><strong>${u.title}</strong><br>${u.description}</div>
+                    ${u.image ? `<img src="${u.image}" class="post-image">` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function loadFiles() {
+            const res = await apiRequest('getFiles');
+            filesData = res.files || [];
+        }
+
+        function initVpnTypes() {
+            const types = ['HTTP CUSTOM', 'TLS TUNNEL', 'NPV TUNNEL', 'DARK TUNNEL', 'ZIVPN', 'HA TUNNEL'];
+            document.getElementById('vpnTypesContainer').innerHTML = types.map(t => `
+                <div class="vpn-card" onclick="selectVpnType('${t}')">
+                    <div class="vpn-card-icon"><i class="fas fa-folder-open"></i></div>
+                    <div class="vpn-card-name">${t}</div>
+                </div>
+            `).join('');
+        }
+
+        async function selectVpnType(type) {
+            const files = filesData.filter(f => f.type === type);
+            const container = document.getElementById('selectedVpnFiles');
+            if (!files.length) {
+                container.innerHTML = `<p style="opacity:0.7;">No files available for ${type}</p>`;
+                return;
+            }
+            container.innerHTML = `<p style="margin-bottom:12px;">Available ${type}:</p><div class="file-list">` +
+                files.map(f => `
+                    <div class="file-item">
+                        <div class="file-item-icon"><i class="fas fa-file-archive"></i></div>
+                        <div class="file-item-name">${f.name}</div>
+                        <button class="download-btn" onclick="downloadFile(${f.id})"><i class="fas fa-download"></i> DOWNLOAD</button>
+                    </div>
+                `).join('') + '</div>';
+        }
+
+        async function downloadFile(fileId) {
+            const file = filesData.find(f => f.id === fileId);
+            if (!file) {
+                alert('File not found');
+                return;
+            }
+            // Track download (increment counter and earnings)
+            await apiRequest('trackDownload', { id: fileId });
+            // Force download via download.php
+            window.location.href = DOWNLOAD_URL + encodeURIComponent(file.path);
+        }
+
+        async function loadAccounts() {
+            if (!currentUser) return;
+            const accounts = currentUser.accounts || [];
+            const list = document.getElementById('accountsList');
+            if (!accounts.length) {
+                list.innerHTML = '<p style="opacity:0.7;">No additional accounts yet</p>';
+                return;
+            }
+            list.innerHTML = accounts.map((acc, idx) => `
+                <div class="account-card">
+                    <div class="account-info"><h3>${acc.username}</h3><p>${acc.email}</p></div>
+                    <div class="account-actions">
+                        <button onclick="switchAccount(${idx})"><i class="fas fa-exchange-alt"></i> SWITCH</button>
+                        <button onclick="removeAccount(${idx})"><i class="fas fa-trash"></i> DELETE</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openAddAccountModal() { document.getElementById('addAccountModal').classList.add('active'); }
+        function closeAddAccountModal() { document.getElementById('addAccountModal').classList.remove('active'); }
+
+        async function addAccount(e) {
+            e.preventDefault();
+            const username = document.getElementById('newAccountUsername').value;
+            const email = document.getElementById('newAccountEmail').value;
+            if (!currentUser.accounts) currentUser.accounts = [];
+            currentUser.accounts.push({ username, email });
+            await apiRequest('updateUserAccounts', { userId: currentUser.id, accounts: currentUser.accounts });
+            loadAccounts();
+            closeAddAccountModal();
+            alert('Account added!');
+        }
+
+        function switchAccount(idx) { alert('Switched to ' + currentUser.accounts[idx].username); }
+        async function removeAccount(idx) {
+            if (confirm('Remove account?')) {
+                currentUser.accounts.splice(idx, 1);
+                await apiRequest('updateUserAccounts', { userId: currentUser.id, accounts: currentUser.accounts });
+                loadAccounts();
+            }
+        }
+
+        async function loadAds() {
+            const res = await apiRequest('getAds');
+            const ads = res.ads || [];
+            const marquee = document.getElementById('adsMarquee');
+            const activeAds = ads.filter(a => a.active);
+            marquee.innerHTML = activeAds.map(ad => `
+                <div class="marquee-item" onclick="window.open('${ad.link}', '_blank')">
+                    <span class="marquee-icon">${ad.icon}</span>
+                    <span class="marquee-text">${ad.message}</span>
+                </div>
+            `).join('') + activeAds.map(ad => `
+                <div class="marquee-item" onclick="window.open('${ad.link}', '_blank')">
+                    <span class="marquee-icon">${ad.icon}</span>
+                    <span class="marquee-text">${ad.message}</span>
+                </div>
+            `).join('');
+
+            const tbl = document.getElementById('adsListTable');
+            if (tbl) {
+                tbl.innerHTML = ads.map(ad => `
+                    <tr>
+                        <td>${ad.icon}</td><td>${ad.type}</td><td>${ad.message}</td>
+                        <td><a href="${ad.link}" target="_blank">Link</a></td><td>${ad.active ? '✅' : '❌'}</td>
+                        <td>
+                            <button onclick="openEditAdModal(${ad.id})"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteAd(${ad.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addAd(e) {
+            e.preventDefault();
+            const newAd = {
+                id: Date.now(),
+                type: document.getElementById('adType').value,
+                link: document.getElementById('adLink').value,
+                icon: document.getElementById('adIcon').value,
+                message: document.getElementById('adMessage').value,
+                active: document.getElementById('adActive').value === 'true'
+            };
+            await apiRequest('addAd', { ad: newAd });
+            loadAds();
+            e.target.reset();
+        }
+
+        function openEditAdModal(id) {
+            apiRequest('getAd', { id }).then(res => {
+                if (res.ad) {
+                    document.getElementById('editAdId').value = res.ad.id;
+                    document.getElementById('editAdType').value = res.ad.type;
+                    document.getElementById('editAdLink').value = res.ad.link;
+                    document.getElementById('editAdIcon').value = res.ad.icon;
+                    document.getElementById('editAdMessage').value = res.ad.message;
+                    document.getElementById('editAdActive').value = res.ad.active ? 'true' : 'false';
+                    document.getElementById('editAdModal').classList.add('active');
+                }
+            });
+        }
+
+        function closeEditAdModal() { document.getElementById('editAdModal').classList.remove('active'); }
+
+        async function updateAd(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('editAdId').value);
+            const updates = {
+                type: document.getElementById('editAdType').value,
+                link: document.getElementById('editAdLink').value,
+                icon: document.getElementById('editAdIcon').value,
+                message: document.getElementById('editAdMessage').value,
+                active: document.getElementById('editAdActive').value === 'true'
+            };
+            await apiRequest('updateAd', { id, updates });
+            loadAds();
+            closeEditAdModal();
+        }
+
+        async function deleteAd(id) {
+            if (confirm('Delete ad?')) {
+                await apiRequest('deleteAd', { id });
+                loadAds();
+            }
+        }
+
+        function toggleSetting(el) { el.classList.toggle('active'); }
+        function editProfile() {
+            if (!currentUser) return;
+            const newName = prompt('Enter new username:', currentUser.username);
+            if (newName) {
+                currentUser.username = newName;
+                apiRequest('updateUser', { id: currentUser.id, username: newName });
+                alert('Updated');
+            }
+        }
+        function changePassword() {
+            if (!currentUser) return;
+            const newPass = prompt('Enter new password:');
+            if (newPass) {
+                currentUser.password = newPass;
+                apiRequest('updateUser', { id: currentUser.id, password: newPass });
+                alert('Password changed');
+            }
+        }
+        function logout() { location.reload(); }
+        function showNotifications() { alert('No new notifications'); }
+
+        function adminAccess() { document.getElementById('adminModal').classList.add('active'); }
+        function closeAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
+
+        async function verifyAdmin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('adminPin').value;
+            const pass = document.getElementById('adminPassword').value;
+            const res = await apiRequest('verifyAdmin', { pin, pass });
+            if (res.success) {
+                closeAdminModal();
+                showAdminPanel();
+            } else alert('Invalid credentials');
+        }
+
+        function showAdminPanel() {
+            document.getElementById('dashboardPage').classList.remove('active');
+            document.getElementById('adminPage').classList.add('active');
+            updateAdminStats();
+            loadAdminUpdates();
+            loadAdminFiles();
+            loadAdminUsers();
+            loadAds();
+            loadEarnings();
+        }
+
+        function logoutAdmin() {
+            document.getElementById('adminPage').classList.remove('active');
+            document.getElementById('dashboardPage').classList.add('active');
+        }
+
+        function showAdminSection(e, section) {
+            document.querySelectorAll('.admin-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.admin-menu button').forEach(el => el.classList.remove('active'));
+            document.getElementById(section + '-section').classList.add('active');
+            e.currentTarget.classList.add('active');
+        }
+
+        async function updateAdminStats() {
+            const res = await apiRequest('getStats');
+            document.getElementById('statUsers').textContent = res.users || 0;
+            document.getElementById('statUpdates').textContent = res.updates || 0;
+            document.getElementById('statFiles').textContent = res.files || 0;
+        }
+
+        async function loadAdminUpdates() {
+            const res = await apiRequest('getUpdates');
+            const list = document.getElementById('adminUpdatesList');
+            if (!res.updates?.length) {
+                list.innerHTML = '<p>No notifications</p>';
+                return;
+            }
+            list.innerHTML = res.updates.map(u => `
+                <div style="padding:8px; border-bottom:1px solid rgba(0,212,255,0.2);">
+                    <strong>${u.title}</strong> (${u.date})
+                    <button onclick="deleteUpdate(${u.id})" style="float:right;"><i class="fas fa-trash"></i> DELETE</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteUpdate(id) {
+            if (confirm('Delete this notification?')) {
+                await apiRequest('deleteUpdate', { id });
+                loadAdminUpdates();
+                loadUpdates();
+            }
+        }
+
+        async function createUpdate(e) {
+            e.preventDefault();
+            const title = document.getElementById('updateTitle').value;
+            const desc = document.getElementById('updateDesc').value;
+            const file = document.getElementById('updateImage').files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('action', 'createUpdate');
+                formData.append('title', title);
+                formData.append('description', desc);
+                formData.append('image', file);
+                await fetch(API_URL, { method: 'POST', body: formData });
+            } else {
+                await apiRequest('createUpdate', { title, description: desc, image: null });
+            }
+            loadUpdates();
+            loadAdminUpdates();
+            document.getElementById('updateTitle').value = '';
+            document.getElementById('updateDesc').value = '';
+            document.getElementById('updateImage').value = '';
+            alert('Notification posted');
+        }
+
+        async function loadAdminFiles() {
+            const res = await apiRequest('getFiles');
+            const tbody = document.getElementById('filesListTable');
+            if (!res.files?.length) {
+                tbody.innerHTML = '<tr><td colspan="5">No files</td></tr>';
+                return;
+            }
+            tbody.innerHTML = res.files.map(f => `
+                <tr>
+                    <td>${f.name}</td><td>${f.type}</td><td>${f.date}</td>
+                    <td>${f.downloads || 0}</td>
+                    <td><button onclick="deleteFile(${f.id})"><i class="fas fa-trash"></i> DELETE</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function deleteFile(id) {
+            if (confirm('Delete file?')) {
+                await apiRequest('deleteFile', { id });
+                loadAdminFiles();
+                loadFiles();
+            }
+        }
+
+        async function uploadFile(e) {
+            e.preventDefault();
+            const type = document.getElementById('fileType').value;
+            const file = document.getElementById('vpnFile').files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('action', 'uploadFile');
+            formData.append('type', type);
+            formData.append('file', file);
+            await fetch(API_URL, { method: 'POST', body: formData });
+            loadAdminFiles();
+            loadFiles();
+            document.getElementById('fileType').value = 'HTTP CUSTOM';
+            document.getElementById('vpnFile').value = '';
+            alert('File uploaded');
+        }
+
+        async function loadAdminUsers() {
+            const res = await apiRequest('getUsers');
+            const tbody = document.getElementById('usersListTable');
+            if (!res.users?.length) {
+                tbody.innerHTML = '<tr><td colspan="4">No users</td></tr>';
+                return;
+            }
+            tbody.innerHTML = res.users.map(u => `
+                <tr><td>${u.username}</td><td>${u.email}</td><td>${(u.accounts || []).length}</td><td>${u.joinedDate || ''}</td></tr>
+            `).join('');
+        }
+
+        // Earnings and withdrawals
+        async function loadEarnings() {
+            const res = await apiRequest('getEarnings');
+            document.getElementById('incomeBalance').textContent = '$' + res.balance.toFixed(2);
+            document.getElementById('totalDownloads').textContent = res.total_downloads || 0;
+            const withdrawalsTbody = document.getElementById('withdrawalsTable');
+            if (res.withdrawals && res.withdrawals.length) {
+                withdrawalsTbody.innerHTML = res.withdrawals.map(w => `
+                    <tr>
+                        <td>${w.date}</td>
+                        <td>$${w.amount.toFixed(2)}</td>
+                        <td>${w.method}</td>
+                        <td>${w.status}</td>
+                    </tr>
+                `).join('');
+            } else {
+                withdrawalsTbody.innerHTML = '<tr><td colspan="4">No withdrawals yet</td></tr>';
+            }
+        }
+
+        async function withdrawEarnings() {
+            const amount = parseFloat(prompt('Enter amount to withdraw (minimum $20):', '20'));
+            if (isNaN(amount) || amount < 20) {
+                alert('Minimum withdrawal is $20');
+                return;
+            }
+            const method = prompt('Withdrawal method (paypal or bank):', 'paypal');
+            if (!method) return;
+            const account = prompt('Enter your PayPal email or bank account details:');
+            if (!account) return;
+            const res = await apiRequest('withdraw', { amount, method, account });
+            if (res.success) {
+                alert('Withdrawal request submitted!');
+                loadEarnings();
+            } else {
+                alert('Error: ' + res.error);
+            }
+        }
+
+        // Rotating title
+        const titles = [
+            'ℍ&𝕄 ℙℝ𝕆𝔻𝕌ℂ𝕋𝕀𝕆ℕ📢',
+            '𝐇&𝐌 𝐔\'𝐑𝐄 𝐖𝐄𝐋𝐂𝐎𝐌𝐄👋',
+            'Ⓖ︎Ⓔ︎Ⓣ︎ Ⓒ︎Ⓞ︎Ⓝ︎Ⓝ︎Ⓔ︎Ⓒ︎Ⓣ︎Ⓔ︎Ⓓ︎🚀',
+            '🇭 &🇲  🇵 🇷 🇴 🇩 🇺 🇨 🇹 🇮 🇴 🇳💵 ',
+            '卄&爪 匚ㄖ几千|ᜊ 卄ㄩ乃🌐',
+            'ꎇꋪꏂꏂꈤꏂ꓄ ꅐ꒒ꋪꀷ🌍',
+            'H̶&M̶ P̶R̶O̶D̶U̶C̶T̶I̶O̶N̶🔐'
+        ];
+        const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#c7b9ff', '#ff9ff6', '#6c5ce7', '#00cec9'];
+        let titleIdx = 0;
+        function startTitleRotation() {
+            setInterval(() => {
+                titleIdx = (titleIdx + 1) % titles.length;
+                const el = document.getElementById('rotatingTitle');
+                el.innerHTML = titles[titleIdx];
+                el.style.color = colors[titleIdx];
+                el.style.textShadow = `0 0 10px ${colors[titleIdx]}`;
+            }, 5000);
+        }
+
+        function navigateTo(e, section) {
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(section + '-section').classList.add('active');
+            e.currentTarget.classList.add('active');
+            if (section === 'files') {
+                document.getElementById('selectedVpnFiles').innerHTML = '';
+            }
+        }
+
+        // ===== ROTATING ADSTERRA ADS VIA ad.php =====
+        async function loadAdFromPHP() {
+            const container = document.getElementById('rotating-ad-container');
+            try {
+                const response = await fetch('ad.php');
+                const content = await response.text();
+                container.innerHTML = content;
+
+                // Execute any script tags inside the fetched content
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    if (oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                    }
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            } catch (error) {
+                console.error('Failed to load ad from ad.php:', error);
+                container.innerHTML = '<p style="color:red;">Ad could not be loaded.</p>';
+            }
+        }
+
+        function startAdRotation() {
+            // Load initial ad
+            loadAdFromPHP();
+            // Rotate every 15 seconds (15000 ms)
+            setInterval(loadAdFromPHP, 15000);
+        }
+    </script>
+</body>
+</html>
