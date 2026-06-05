@@ -4,6 +4,8 @@
   "description": "",
   "main": "taragonbot.js",
   "scripts": {
+    "start": "node taragonbot.js",
+    "build": "npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,11 +16,15 @@
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^7.0.0-rc13",
     "axios": "^1.17.0",
+    "express": "^4.18.2",
     "fluent-ffmpeg": "^2.1.3",
     "node-fetch": "^3.3.2",
     "openai": "^6.42.0",
     "pino": "^10.3.1",
     "qrcode-terminal": "^0.12.0",
     "yt-search": "^2.13.1"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
