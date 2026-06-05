@@ -29,7 +29,7 @@ const execFileAsync = promisify(execFile);
 
 // ======================== CONFIGURATION ========================
 const PORT = process.env.PORT || 3000;
-const OWNER_PHONE = '27785028986';
+const OWNER_PHONE = '27785028986'; // CHANGE THIS TO YOUR NUMBER!
 const TEMP_DIR = path.join(__dirname, 'temp');
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 const WARNINGS_FILE = path.join(__dirname, 'warnings.json');
@@ -75,6 +75,7 @@ if (!settings.goodbye) settings.goodbye = {};
 const activeBots = new Map();
 const chatMemory = { messages: new Map(), userInfo: new Map() };
 const BAD_WORDS = ['badword1', 'stupid', 'idiot', 'fuck', 'shit', 'fokof', 'tsek', 'nggA', 'fusek', 'asshole', 'dumass', 'kill', 'you'];
+const botName = '𝐓𝐀𝐑𝐀𝐆𝐎𝐍 𝐒𝐐𝐔𝐀𝐃 𝐓𝐑𝐒🇻🇦';
 
 // ======================== HELPERS ========================
 const api = axios.create({ timeout: 30000 });
@@ -156,15 +157,14 @@ function createSendStyledMessage(sock, botName) { return async (jid, content, op
 
 // ======================== BOT SETUP ========================
 function setupBot(sock, botNumber, isOwnerBot = false) {
-    const ownerNumber = `${botNumber}@s.whatsapp.net`;
-    const botName = '𝐓𝐀𝐑𝐀𝐆𝐎𝐍 𝐒𝐐𝐔𝐀𝐃 𝐓𝐑𝐒🇻🇦';
+    const ownerNumber = `${OWNER_PHONE}@s.whatsapp.net`;
     const sendStyledMessage = createSendStyledMessage(sock, botName);
     const startTime = Date.now();
     
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0]; if (!msg?.message) return;
         const jid = msg.key.remoteJid; const isGroup = jid?.endsWith('@g.us'); const sender = isGroup ? msg.key.participant : jid;
-        const senderClean = sender?.split('@')[0]; const ownerClean = ownerNumber?.split('@')[0];
+        const senderClean = sender?.split('@')[0]; const ownerClean = OWNER_PHONE;
         const isOwner = (sender === ownerNumber) || (senderClean === ownerClean);
         const isFromMe = msg.key.fromMe;
         let text = msg.message.conversation || msg.message.extendedTextMessage?.text || ''; const isCommand = text.startsWith('!');
@@ -221,22 +221,49 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
                 if (command === 'setmention') { if (!quoted) return sendStyledMessage(jid, { text: 'Reply to a message to set mention text.' }); settings.mentionMsg = quoted.conversation || quoted.extendedTextMessage?.text || 'Mentioned!'; saveSettings(); return sendStyledMessage(jid, { text: `✅ Mention message set to: ${settings.mentionMsg}` }); }
                 if (command === 'mention') { settings.mention = input === 'on' ? true : input === 'off' ? false : !settings.mention; saveSettings(); return sendStyledMessage(jid, { text: `🔔 Auto-mention *${settings.mention ? 'ON' : 'OFF'}*` }); }
                 
-                // !pair command
+                // FIXED PAIR COMMAND
                 if (command === 'pair') {
-                    if (!input || input.length < 10) return sendStyledMessage(jid, { text: 'Usage: !pair <phone number with country code>\nExample: !pair 27712345678' });
+                    if (!input || input.length < 10) return sendStyledMessage(jid, { text: '❌ Usage: !pair <phone number>\n📱 Example: !pair 27712345678\n\n⚠️ After getting the code:\n1. Open WhatsApp\n2. Settings → Linked Devices\n3. Link a Device\n4. Enter the code manually' });
                     const phone = input.replace(/\D/g, '');
+                    if (phone === OWNER_PHONE) return sendStyledMessage(jid, { text: '❌ Cannot pair owner number again.' });
+                    
+                    await sendStyledMessage(jid, { text: `🔑 Generating pairing code for +${phone}...\n⏳ Please wait...` });
+                    
                     try {
-                        const sessionDir = path.join(SESSIONS_DIR, `session_${phone}_${Date.now()}`);
+                        const sessionDir = path.join(SESSIONS_DIR, `user_${phone}_${Date.now()}`);
                         const { state: st, saveCreds: sc } = await useMultiFileAuthState(sessionDir);
                         const { version: v } = await fetchLatestBaileysVersion();
-                        const newSock = makeWASocket({ version: v, auth: { creds: st.creds, keys: makeCacheableSignalKeyStore(st.keys, pino({ level: 'silent' })) }, printQRInTerminal: false, logger: pino({ level: 'silent' }), browser: Browsers.macOS('Chrome'), markOnlineOnConnect: false });
+                        const newSock = makeWASocket({ 
+                            version: v, 
+                            auth: { creds: st.creds, keys: makeCacheableSignalKeyStore(st.keys, pino({ level: 'silent' })) }, 
+                            printQRInTerminal: false, 
+                            logger: pino({ level: 'silent' }), 
+                            browser: Browsers.macOS('Chrome'), 
+                            markOnlineOnConnect: false 
+                        });
+                        
                         const code = await newSock.requestPairingCode(phone);
-                        await sendStyledMessage(jid, { text: `🔑 *Pairing Code for ${phone}:*\n\n\`\`\`${code}\`\`\`\n\n📱 *How to link:*\n1. Open WhatsApp\n2. Linked Devices\n3. Link a Device\n4. Enter: ${code}\n\n⏰ Code expires in 2 minutes.` });
+                        
+                        await sendStyledMessage(jid, { 
+                            text: `🔑 *PAIRING CODE FOR +${phone}*\n\n╔════════════════════╗\n║  ${code}  ║\n╚════════════════════╝\n\n📱 *HOW TO USE:*\n━━━━━━━━━━━━━━━━━━━━\n1️⃣ Open WhatsApp on +${phone}\n2️⃣ Go to Settings → Linked Devices\n3️⃣ Tap "Link a Device"\n4️⃣ Enter this code: ${code}\n5️⃣ Wait 2-3 seconds\n\n⏰ Code expires in 2 minutes` 
+                        });
+                        
                         let done = false;
-                        newSock.ev.on('connection.update', (u) => { if (u.connection === 'open' && !done) { done = true; const n = newSock.user.id.split(':')[0]; activeBots.set(sessionDir, { sock: newSock, phone, number: n }); setupBot(newSock, n); sendStyledMessage(jid, { text: `✅ ${phone} connected as +${n}!` }).catch(()=>{}); } if (u.connection === 'close') activeBots.delete(sessionDir); });
+                        newSock.ev.on('connection.update', (u) => { 
+                            if (u.connection === 'open' && !done) { 
+                                done = true; 
+                                const n = newSock.user.id.split(':')[0]; 
+                                activeBots.set(sessionDir, { sock: newSock, phone, number: n }); 
+                                setupBot(newSock, n); 
+                                sendStyledMessage(jid, { text: `✅ *SUCCESS!* +${phone} connected as +${n}!\n🤖 Bot is now active for this user.` }).catch(()=>{}); 
+                            } 
+                            if (u.connection === 'close') activeBots.delete(sessionDir); 
+                        });
                         newSock.ev.on('creds.update', sc);
-                        setTimeout(() => { if (!done) sendStyledMessage(jid, { text: `⏰ Pairing code for ${phone} expired.` }).catch(()=>{}); }, 120000);
-                    } catch(e) { await sendStyledMessage(jid, { text: `❌ Failed: ${e.message}` }); }
+                        setTimeout(() => { if (!done) sendStyledMessage(jid, { text: `⏰ Pairing code for +${phone} expired. Run !pair again.` }).catch(()=>{}); }, 120000);
+                    } catch(e) { 
+                        await sendStyledMessage(jid, { text: `❌ Failed: ${e.message}\n\n💡 Make sure the number is correct and has WhatsApp installed.` }); 
+                    }
                 }
             }
 
@@ -258,7 +285,7 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
 ┃ ✦ 📊 𝐔𝐒𝐀𝐆𝐄 : ${usageMB} MB
 ╰━━━━━━━━━━━━━━━━━━━╯
 
-╔═══════════════════╗
+╔═══════════════════════╗
 🌐 *General Commands*
 ║ ➤ !menu / !help
 ║ ➤ !ping
@@ -278,9 +305,9 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
 ║ ➤ !trt <text> <lang>
 ║ ➤ !jid
 ║ ➤ !check <host>
-╚═══════════════════╝
+╚═══════════════════════╝
 
-╔═══════════════════╗
+╔═══════════════════════╗
 👮‍♂️ *Admin Commands*
 ║ ➤ !ban / !kick @user
 ║ ➤ !promote @user
@@ -303,9 +330,9 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
 ║ ➤ !setgdesc <desc>
 ║ ➤ !setgname <name>
 ║ ➤ !setgpp (reply img)
-╚═══════════════════╝
+╚═══════════════════════╝
 
-╔═══════════════════╗
+╔═══════════════════════╗
 🔒 *Owner Commands*
 ║ ➤ !mode <public/private>
 ║ ➤ !chatbot <on/off> (global)
@@ -321,16 +348,16 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
 ║ ➤ !setpp (reply img)
 ║ ➤ !cleartmp
 ║ ➤ !settings
-╚═══════════════════╝
+╚═══════════════════════╝
 
-╔═══════════════════╗
+╔═══════════════════════╗
 🤖 *AI Commands*
 ║ ➤ !gpt <question>
 ║ ➤ !gemini <question>
 ║ ➤ !imagine <prompt>
-╚═══════════════════╝
+╚═══════════════════════╝
 
-╔═══════════════════╗
+╔═══════════════════════╗
 📥 *Downloader*
 ║ ➤ !play / !ytmp3 <song/url>
 ║ ➤ !ytmp4 <url>
@@ -338,14 +365,14 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
 ║ ➤ !instagram <url>
 ║ ➤ !facebook <url>
 ║ ➤ !spotify <query>
-╚═══════════════════╝`;
+╚═══════════════════════╝`;
 
                 await sendStyledMessage(jid, { text: menu, mentions: [sender], contextInfo: { externalAdReply: { title: botName, body: `Status: Online | Mode: ${settings.mode === 'public' ? 'Public' : 'Private'}`, thumbnailUrl: 'https://imgur.com/a/jULJGsZ', mediaType: 1, renderLargerThumbnail: true } } });
             }
 
             else if (command === 'ping') { const start = Date.now(); await sendStyledMessage(jid, { text: `🏓 Pong! *${Date.now() - start}ms*` }); }
             else if (command === 'alive') { await sendStyledMessage(jid, { text: `✅ *${botName}* is online and ready!` }); }
-            else if (command === 'owner') { await sendStyledMessage(jid, { text: `👑 Owner: wa.me/${botNumber}` }); }
+            else if (command === 'owner') { await sendStyledMessage(jid, { text: `👑 Owner: wa.me/${OWNER_PHONE}` }); }
             else if (command === 'jid') { await sendStyledMessage(jid, { text: `📇 JID: ${jid}\nSender: ${sender}` }); }
             else if (command === 'vv') { if (quoted?.viewOnceMessageV2) { const viewOnce = quoted.viewOnceMessageV2.message; let media, type; if (viewOnce.imageMessage) { media = viewOnce.imageMessage; type = 'image'; } else if (viewOnce.videoMessage) { media = viewOnce.videoMessage; type = 'video'; } if (media) { const buffer = await getMediaBuffer(media, type); if (type === 'image') await sendStyledMessage(jid, { image: buffer }); else await sendStyledMessage(jid, { video: buffer }); } } else await sendStyledMessage(jid, { text: 'Reply to a view-once message.' }); }
             else if (command === 'trt') { const parts = input.split(' '); const lang = parts.pop(); const textToTranslate = parts.join(' '); if (!textToTranslate || !lang) return sendStyledMessage(jid, { text: 'Usage: !trt <text> <lang_code>\nExample: !trt Hello es' }); const translated = await translate(textToTranslate, lang); await sendStyledMessage(jid, { text: `🌐 ${translated}` }); }
@@ -361,7 +388,7 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
             else if ((command === 'staff' || command === 'admins') && isGroup) { const meta = await getGroupMeta(); const admins = meta.participants.filter(p => p.admin); if (!admins.length) return sendStyledMessage(jid, { text: 'No admins found.' }); await sendStyledMessage(jid, { text: `👮 *Admins:*\n${admins.map(p => `@${p.id.split('@')[0]}`).join('\n')}`, mentions: admins.map(p => p.id) }); }
 
             // Admin commands
-            else if (['ban', 'kick'].includes(command) && isGroup) { if (!await isAdmin()) return sendStyledMessage(jid, { text: '❌ Admins only.' }); const target = mentionedJid || quotedKey?.participant; if (!target) return sendStyledMessage(jid, { text: 'Mention or reply to a user.' }); if (target.split('@')[0] === ownerClean) return sendStyledMessage(jid, { text: '❌ Cannot kick the owner.' }); await sock.groupParticipantsUpdate(jid, [target], 'remove'); await sendStyledMessage(jid, { text: `✅ Kicked @${target.split('@')[0]}`, mentions: [target] }); }
+            else if (['ban', 'kick'].includes(command) && isGroup) { if (!await isAdmin()) return sendStyledMessage(jid, { text: '❌ Admins only.' }); const target = mentionedJid || quotedKey?.participant; if (!target) return sendStyledMessage(jid, { text: 'Mention or reply to a user.' }); if (target.split('@')[0] === OWNER_PHONE) return sendStyledMessage(jid, { text: '❌ Cannot kick the owner.' }); await sock.groupParticipantsUpdate(jid, [target], 'remove'); await sendStyledMessage(jid, { text: `✅ Kicked @${target.split('@')[0]}`, mentions: [target] }); }
             else if (command === 'promote' && isGroup) { if (!await isAdmin()) return sendStyledMessage(jid, { text: '❌ Admins only.' }); const target = mentionedJid; if (!target) return sendStyledMessage(jid, { text: 'Mention a user.' }); await sock.groupParticipantsUpdate(jid, [target], 'promote'); await sendStyledMessage(jid, { text: `👑 Promoted @${target.split('@')[0]}`, mentions: [target] }); }
             else if (command === 'demote' && isGroup) { if (!await isAdmin()) return sendStyledMessage(jid, { text: '❌ Admins only.' }); const target = mentionedJid; if (!target) return sendStyledMessage(jid, { text: 'Mention a user.' }); await sock.groupParticipantsUpdate(jid, [target], 'demote'); await sendStyledMessage(jid, { text: `📉 Demoted @${target.split('@')[0]}`, mentions: [target] }); }
             else if (command === 'mute' && isGroup) { if (!await isAdmin()) return sendStyledMessage(jid, { text: '❌ Admins only.' }); const minutes = parseInt(input) || 60; await sock.groupSettingUpdate(jid, 'announcement'); setTimeout(async () => { await sock.groupSettingUpdate(jid, 'not_announcement').catch(() => {}); }, minutes * 60000); await sendStyledMessage(jid, { text: `🔇 Group muted for *${minutes} minutes*.` }); }
@@ -406,12 +433,29 @@ function setupBot(sock, botNumber, isOwnerBot = false) {
     sock.ev.on('group-participants.update', async (update) => { const { id, participants, action } = update; try { if (action === 'add' && settings.welcome?.[id]) { for (const p of participants) { await sendStyledMessage(id, { text: `👋 Welcome @${p.split('@')[0]}! Glad to have you here.`, mentions: [p] }); } } else if ((action === 'remove' || action === 'leave') && settings.goodbye?.[id]) { for (const p of participants) { await sendStyledMessage(id, { text: `👋 Goodbye @${p.split('@')[0]}. We'll miss you!`, mentions: [p] }); } } } catch (e) { console.error('Welcome/goodbye error:', e.message); } });
 }
 
-// ======================== MAIN PAIRING PROCESS ========================
+// ======================== FIXED MAIN PAIRING PROCESS ========================
 async function startOwnerPairing(io) {
-    console.log('\n📱 ==========================================');
-    console.log('📱 STARTING OWNER PAIRING PROCESS');
-    console.log('📱 ==========================================\n');
-    console.log(`📱 Phone: ${OWNER_PHONE}\n`);
+    console.log('\n╔══════════════════════════════════════════════════════════════╗');
+    console.log('║                                                              ║');
+    console.log('║     📱 TARAGON BOT - WHATSAPP PAIRING SYSTEM                ║');
+    console.log('║                                                              ║');
+    console.log('╚══════════════════════════════════════════════════════════════╝\n');
+    
+    console.log(`📱 Owner Phone: ${OWNER_PHONE}\n`);
+    
+    console.log('⚠️  IMPORTANT INFORMATION:');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📌 WhatsApp does NOT send you a "Link a Device" message.');
+    console.log('📌 You MUST manually enter the code on your phone.\n');
+    
+    console.log('📱 STEPS TO CONNECT (ON YOUR PHONE):');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('1️⃣  Open WhatsApp on your phone');
+    console.log('2️⃣  Tap the 3 dots (⋮) → Settings (or directly Linked Devices)');
+    console.log('3️⃣  Tap "Linked Devices"');
+    console.log('4️⃣  Tap "Link a Device" (NOT "Link with QR Code")');
+    console.log('5️⃣  When prompted, enter the 8-digit code shown below');
+    console.log('6️⃣  Wait 2-3 seconds for connection\n');
     
     // Clean any existing owner sessions
     const existingSessions = fs.readdirSync(SESSIONS_DIR).filter(f => f.startsWith('owner_'));
@@ -419,15 +463,9 @@ async function startOwnerPairing(io) {
         const sessionPath = path.join(SESSIONS_DIR, f);
         if (fs.existsSync(sessionPath)) {
             fs.rmSync(sessionPath, { recursive: true, force: true });
-            console.log(`🗑️ Cleaned old session: ${f}`);
+            console.log(`🗑️  Cleaned old session: ${f}`);
         }
     });
-    
-    // Clean old auth_info_baileys if exists
-    if (fs.existsSync('auth_info_baileys')) {
-        fs.rmSync('auth_info_baileys', { recursive: true, force: true });
-        console.log('🗑️ Cleaned old auth_info_baileys');
-    }
     
     const sessionDir = path.join(SESSIONS_DIR, `owner_${OWNER_PHONE}`);
     
@@ -435,7 +473,7 @@ async function startOwnerPairing(io) {
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
         const { version } = await fetchLatestBaileysVersion();
         
-        console.log('🔌 Creating WhatsApp socket...');
+        console.log('🔌 Creating WhatsApp socket...\n');
         
         const sock = makeWASocket({
             version,
@@ -452,24 +490,21 @@ async function startOwnerPairing(io) {
             defaultQueryTimeoutMs: 60000
         });
         
-        console.log('🔑 Requesting pairing code from WhatsApp...');
+        console.log('🔑 Requesting pairing code from WhatsApp...\n');
         
-        // Request the pairing code - this triggers WhatsApp to send the "Link a Device" prompt
+        // Generate the pairing code
         const code = await sock.requestPairingCode(OWNER_PHONE);
         
-        console.log('\n╔══════════════════════════════════════════╗');
-        console.log('║                                          ║');
-        console.log('║     🔑 YOUR PAIRING CODE                 ║');
-        console.log('║                                          ║');
-        console.log(`║          ${code}                         ║');
-        console.log('║                                          ║');
-        console.log('╚══════════════════════════════════════════╝\n');
+        console.log('╔══════════════════════════════════════════════════════════════╗');
+        console.log('║                                                              ║');
+        console.log('║              🔑 YOUR 8-DIGIT PAIRING CODE                    ║');
+        console.log('║                                                              ║');
+        console.log(`║                    ${code}                                    ║`);
+        console.log('║                                                              ║');
+        console.log('╚══════════════════════════════════════════════════════════════╝\n');
         
-        console.log('📱 WHATSAPP SHOULD NOW SHOW "Link a Device" ON YOUR PHONE');
-        console.log('📱 IF NOT: Open WhatsApp > Settings > Linked Devices > Link a Device\n');
-        console.log(`📋 ENTER THIS CODE: ${code}\n`);
-        console.log(`🌐 Web panel: http://localhost:${PORT}\n`);
         console.log('⏰ Code expires in 2 minutes\n');
+        console.log('🌐 Web panel: http://localhost:' + PORT + '\n');
         console.log('⏳ Waiting for you to enter the code in WhatsApp...\n');
         
         // Emit code to web clients
@@ -478,27 +513,28 @@ async function startOwnerPairing(io) {
         // Set timeout
         const timeout = setTimeout(() => {
             console.log('\n⏰ Pairing code expired!');
-            console.log('🔄 Restart the bot to get a new code.\n');
+            console.log('🔄 Run "node bot.js" again to get a new code.\n');
             io.emit('codeExpired', { msg: 'Code expired' });
             process.exit(1);
         }, 120000);
         
         // Listen for connection
         sock.ev.on('connection.update', (update) => {
-            const { connection } = update;
+            const { connection, lastDisconnect } = update;
             
             if (connection === 'open') {
                 clearTimeout(timeout);
                 const botNumber = sock.user.id.split(':')[0];
                 activeBots.set(`owner_${OWNER_PHONE}`, { sock, phone: OWNER_PHONE, number: botNumber });
                 
-                console.log('\n╔══════════════════════════════════════════╗');
-                console.log('║                                          ║');
-                console.log('║     ✅ CONNECTED SUCCESSFULLY!           ║');
-                console.log('║                                          ║');
-                console.log(`║     Bot Number: +${botNumber}              ║');
-                console.log('║                                          ║');
-                console.log('╚══════════════════════════════════════════╝\n');
+                console.log('\n╔══════════════════════════════════════════════════════════════╗');
+                console.log('║                                                              ║');
+                console.log('║     ✅ CONNECTED SUCCESSFULLY!                               ║');
+                console.log('║                                                              ║');
+                console.log(`║     Bot Number: +${botNumber}                                  ║`);
+                console.log('║     Status: ONLINE                                          ║');
+                console.log('║                                                              ║');
+                console.log('╚══════════════════════════════════════════════════════════════╝\n');
                 console.log('🤖 Bot is now online and fully operational!\n');
                 console.log('💬 Send !menu in WhatsApp to see all commands.\n');
                 
@@ -509,9 +545,19 @@ async function startOwnerPairing(io) {
             }
             
             if (connection === 'close') {
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                
                 activeBots.delete(`owner_${OWNER_PHONE}`);
                 io.emit('count', { count: activeBots.size });
-                console.log('❌ Connection closed.');
+                
+                if (shouldReconnect) {
+                    console.log('❌ Connection closed. Reconnecting in 10 seconds...');
+                    setTimeout(() => startOwnerPairing(io), 10000);
+                } else {
+                    console.log('❌ Logged out. Please restart bot.');
+                    io.emit('loggedOut', { msg: 'Logged out - restart required' });
+                }
             }
         });
         
@@ -519,8 +565,12 @@ async function startOwnerPairing(io) {
         
     } catch (err) {
         console.error('\n❌ Pairing failed:', err.message);
-        console.log('\n🔄 Retrying in 5 seconds...\n');
-        setTimeout(() => startOwnerPairing(io), 5000);
+        if (err.message.includes('timeout') || err.message.includes('ECONNREFUSED')) {
+            console.log('\n🔄 Network issue. Retrying in 10 seconds...\n');
+            setTimeout(() => startOwnerPairing(io), 10000);
+        } else {
+            console.log('\n❌ Make sure you have internet connection and WhatsApp is up to date.\n');
+        }
     }
 }
 
@@ -585,7 +635,7 @@ const html = `<!DOCTYPE html>
             border:1px solid rgba(255,255,255,0.08);
             border-radius:24px;
             padding:40px;
-            max-width:500px;width:92%;
+            max-width:550px;width:92%;
             box-shadow:0 25px 50px rgba(0,0,0,0.5);
         }
         .logo{
@@ -634,12 +684,6 @@ const html = `<!DOCTYPE html>
             border:1px solid rgba(255,255,255,0.1);
         }
         .btn-copy:hover{background:rgba(255,255,255,0.15)}
-        .btn-new{
-            background:linear-gradient(135deg,#667eea,#764ba2);
-            color:white;
-            box-shadow:0 4px 20px rgba(102,126,234,0.3);
-        }
-        .btn-new:hover{transform:translateY(-2px)}
         .steps{
             background:rgba(255,255,255,0.03);
             border-radius:12px;
@@ -681,9 +725,18 @@ const html = `<!DOCTYPE html>
             color:rgba(255,255,255,0.4);
             font-size:12px;margin-top:16px;
         }
+        .warning-box{
+            background:rgba(255,100,100,0.1);
+            border-left:3px solid #ff6b6b;
+            padding:12px;
+            margin-top:16px;
+            border-radius:8px;
+            font-size:12px;
+            color:rgba(255,255,255,0.7);
+        }
         @media(max-width:480px){
             .card{padding:24px}
-            .code{font-size:36px;letter-spacing:12px;padding:20px}
+            .code{font-size:32px;letter-spacing:10px;padding:18px}
         }
     </style>
 </head>
@@ -701,13 +754,17 @@ const html = `<!DOCTYPE html>
         </div>
         
         <button class="btn btn-copy" onclick="copyCode()">📋 Copy Code</button>
-        <button class="btn btn-new" onclick="refreshCode()">🔄 Generate New Code</button>
         
         <div class="steps">
             <div class="step"><span class="step-num">1</span> Open WhatsApp on your phone</div>
             <div class="step"><span class="step-num">2</span> Tap ⋮ → <strong>Linked Devices</strong></div>
             <div class="step"><span class="step-num">3</span> Tap <strong>Link a Device</strong></div>
             <div class="step"><span class="step-num">4</span> Enter the code shown above</div>
+        </div>
+        
+        <div class="warning-box">
+            ⚠️ <strong>Important:</strong> WhatsApp does NOT send you a message with the code. 
+            You must manually enter this code in the "Link a Device" screen on your phone.
         </div>
         
         <p class="status" id="status">Waiting for pairing code...</p>
@@ -751,7 +808,7 @@ const html = `<!DOCTYPE html>
         });
 
         socket.on('codeExpired',()=>{
-            document.getElementById('status').innerHTML='<span class="error">⏰ Code expired. Click Generate New Code.</span>';
+            document.getElementById('status').innerHTML='<span class="error">⏰ Code expired. Restart the bot to get a new code.</span>';
         });
 
         socket.on('count',(data)=>{
@@ -762,39 +819,40 @@ const html = `<!DOCTYPE html>
             if(!currentCode || currentCode === '--------') return;
             navigator.clipboard.writeText(currentCode).then(()=>{
                 const btn=document.querySelector('.btn-copy');
-                btn.textContent='✅ Copied!';btn.style.borderColor='rgba(81,207,102,0.5)';btn.style.color='#51cf66';
-                setTimeout(()=>{btn.textContent='📋 Copy Code';btn.style.borderColor='rgba(255,255,255,0.1)';btn.style.color='white'},2000);
+                btn.textContent='✅ Copied!';
+                btn.style.borderColor='rgba(81,207,102,0.5)';
+                btn.style.color='#51cf66';
+                setTimeout(()=>{
+                    btn.textContent='📋 Copy Code';
+                    btn.style.borderColor='rgba(255,255,255,0.1)';
+                    btn.style.color='white';
+                },2000);
             }).catch(()=>{
                 const ta=document.createElement('textarea');
-                ta.value=currentCode;document.body.appendChild(ta);
-                ta.select();document.execCommand('copy');
+                ta.value=currentCode;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
                 document.body.removeChild(ta);
                 const btn=document.querySelector('.btn-copy');
                 btn.textContent='✅ Copied!';
                 setTimeout(()=>btn.textContent='📋 Copy Code',2000);
             });
         }
-
-        function refreshCode(){
-            document.getElementById('code').textContent='--------';
-            document.getElementById('status').innerHTML='<span class="spinner"></span><span class="waiting">Generating new code...</span>';
-            currentCode='';
-            location.reload();
-        }
     </script>
 </body>
 </html>`;
 
+// Ensure public directory exists
+if (!fs.existsSync(path.join(__dirname, 'public'))) {
+    fs.mkdirSync(path.join(__dirname, 'public'));
+}
 fs.writeFileSync(path.join(__dirname, 'public', 'index.html'), html);
 
 // Socket.io
 io.on('connection', (socket) => {
     socket.emit('count', { count: activeBots.size });
     if (currentPairingCode) socket.emit('code', { code: currentPairingCode, phone: OWNER_PHONE });
-    
-    socket.on('newCode', async () => {
-        socket.emit('info', { msg: 'Restart the bot to get a new pairing code.' });
-    });
 });
 
 // Start server
@@ -802,7 +860,7 @@ server.listen(PORT, () => {
     console.log(`\n╔══════════════════════════════════════╗`);
     console.log(`║  🇻🇦 TARAGON BOT SERVER            ║`);
     console.log(`║  Port: ${PORT}                       ║`);
-    console.log(`║  http://localhost:${PORT}              ║`);
+    console.log(`║  http://localhost:${PORT}            ║`);
     console.log(`╚══════════════════════════════════════╝\n`);
 });
 
