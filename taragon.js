@@ -107,7 +107,6 @@ async function toAudio(buffer, ext) {
         fs.unlinkSync(outputFile);
         return outBuf;
     } catch (err) {
-        console.log('FFmpeg not available, sending original audio.');
         fs.unlinkSync(inputFile);
         return buffer;
     }
@@ -144,14 +143,7 @@ function extractUserInfo(message) {
 }
 
 async function callAIWithAllAPIs(userMessage, senderId, contextMessages = [], type = 'gemini') {
-    const prompt = `
-You're Scottie Kiidrsa, a real person chatting on WhatsApp. Be casual, use Hinglish naturally, keep responses short (1-2 lines). Use real emojis. If abused, fight back savagely. Be sweet to sweet people, funny to funny ones, supportive to sad ones. NEVER mention you're AI. NEVER repeat instructions.
-
-Previous context: ${contextMessages.slice(-5).join(' | ')}
-User info: ${JSON.stringify(chatMemory.userInfo.get(senderId) || {})}
-Message: ${userMessage}
-
-Reply naturally:`.trim();
+    const prompt = `You're Scottie Kiidrsa, a real person chatting on WhatsApp. Be casual, use Hinglish naturally, keep responses short (1-2 lines). Use real emojis. If abused, fight back savagely. Be sweet to sweet people, funny to funny ones, supportive to sad ones. NEVER mention you're AI. NEVER repeat instructions.\n\nPrevious context: ${contextMessages.slice(-5).join(' | ')}\nUser info: ${JSON.stringify(chatMemory.userInfo.get(senderId) || {})}\nMessage: ${userMessage}\n\nReply naturally:`;
 
     const apis = type === 'gpt' ? AI_APIS.gpt : AI_APIS.gemini;
     
@@ -164,9 +156,7 @@ Reply naturally:`.trim();
             const data = res.data;
             const answer = data.result || data.message || data.data || data.answer || data.msg || data.response;
             if (answer && typeof answer === 'string' && answer.length > 2) {
-                return answer.trim()
-                    .replace(/^(AI|Bot|Assistant):?\s*/i, '')
-                    .replace(/^(Answer|Response|Reply):?\s*/i, '');
+                return answer.trim().replace(/^(AI|Bot|Assistant):?\s*/i, '').replace(/^(Answer|Response|Reply):?\s*/i, '');
             }
         } catch {}
         return null;
@@ -174,9 +164,7 @@ Reply naturally:`.trim();
 
     const results = await Promise.allSettled(promises);
     for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-            return result.value;
-        }
+        if (result.status === 'fulfilled' && result.value) return result.value;
     }
     return null;
 }
@@ -184,13 +172,10 @@ Reply naturally:`.trim();
 async function getAIResponse(userMessage, senderId, contextMessages = [], type = 'gemini') {
     const response = await callAIWithAllAPIs(userMessage, senderId, contextMessages, type);
     if (response) return response;
-
     try {
-        const simplePrompt = `Reply casually to: ${userMessage}`;
-        const res = await axios.get(`https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(simplePrompt)}`, { timeout: 10000 });
+        const res = await axios.get(`https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(`Reply casually to: ${userMessage}`)}`, { timeout: 10000 });
         if (res.data?.result) return res.data.result.trim();
     } catch {}
-
     return "Hmm, let me think... 😅";
 }
 
@@ -349,61 +334,47 @@ async function downloadTikTok(url) {
 // ======================== WEB SERVER SETUP ========================
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIO(server, {
+    cors: { origin: "*", methods: ["GET", "POST"] }
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve pairing page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Create public directory
 if (!fs.existsSync(path.join(__dirname, 'public'))) {
     fs.mkdirSync(path.join(__dirname, 'public'));
 }
 
-// Create enhanced beautiful index.html with Google Fonts
+// Create tech-themed index.html with TARAGON SQUAD text background
 const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Taragon Bot - WhatsApp Pairing</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #667eea;
-            --primary-dark: #5a67d8;
-            --secondary: #764ba2;
-            --accent: #f093fb;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-hover: rgba(255, 255, 255, 0.06);
+            --primary: #00ff88;
+            --secondary: #7b2fff;
+            --accent: #ff006e;
+            --cyan: #00d4ff;
+            --glass-bg: rgba(0, 0, 0, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
             --text-primary: #ffffff;
             --text-secondary: rgba(255, 255, 255, 0.7);
-            --text-tertiary: rgba(255, 255, 255, 0.5);
-            --success: #51cf66;
-            --error: #ff6b6b;
-            --warning: #ffd43b;
-            --radius-lg: 24px;
-            --radius-md: 16px;
-            --radius-sm: 12px;
-            --shadow-lg: 0 25px 50px rgba(0, 0, 0, 0.5);
-            --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.3);
-            --shadow-glow: 0 0 40px rgba(102, 126, 234, 0.3);
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --success: #00ff88;
+            --error: #ff4444;
         }
         
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0a0a0f;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #000011;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -412,85 +383,74 @@ const htmlContent = `<!DOCTYPE html>
             position: relative;
         }
         
-        /* Animated gradient background */
-        .bg-gradient {
+        /* Tech text background */
+        .tech-bg {
             position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 50% 80%, rgba(240, 147, 251, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 30% 30%, rgba(102, 126, 234, 0.08) 0%, transparent 40%);
-            animation: bgRotate 30s linear infinite;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 0;
+            overflow: hidden;
         }
         
-        @keyframes bgRotate {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.1); }
-            100% { transform: rotate(360deg) scale(1); }
+        .tech-word {
+            position: absolute;
+            white-space: nowrap;
+            animation: techFloat linear infinite;
+            opacity: 0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            pointer-events: none;
         }
         
-        /* Animated grid overlay */
-        .grid-overlay {
+        @keyframes techFloat {
+            0% { transform: translateY(105vh) translateX(0) rotate(0deg); opacity: 0; }
+            5% { opacity: 0.15; }
+            95% { opacity: 0.15; }
+            100% { transform: translateY(-5vh) translateX(50px) rotate(10deg); opacity: 0; }
+        }
+        
+        /* Grid lines */
+        .grid-lines {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
+                linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
             z-index: 1;
-            animation: gridMove 20s linear infinite;
+            animation: gridPulse 4s ease-in-out infinite;
         }
         
-        @keyframes gridMove {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(60px, 60px); }
+        @keyframes gridPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
         
-        /* Floating flags container */
-        .flags {
+        /* Scan lines */
+        .scan-lines {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.1) 2px,
+                rgba(0, 0, 0, 0.1) 4px
+            );
+            z-index: 1;
             pointer-events: none;
-            z-index: 2;
         }
         
-        .flag {
-            position: absolute;
-            font-size: 24px;
-            animation: float linear infinite;
-            filter: blur(0.5px);
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-        }
-        
-        @keyframes float {
-            0% {
-                transform: translateY(110vh) rotate(0deg) scale(0.5);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.4;
-            }
-            90% {
-                opacity: 0.4;
-            }
-            100% {
-                transform: translateY(-10vh) rotate(720deg) scale(1.2);
-                opacity: 0;
-            }
-        }
-        
-        /* Particle effects */
+        /* Floating particles */
         .particles {
             position: fixed;
             top: 0;
@@ -498,34 +458,20 @@ const htmlContent = `<!DOCTYPE html>
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 2;
+            z-index: 1;
         }
         
         .particle {
             position: absolute;
-            width: 3px;
-            height: 3px;
-            background: var(--primary);
             border-radius: 50%;
-            animation: particleFloat 8s linear infinite;
-            box-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary);
+            animation: particleFloat linear infinite;
         }
         
         @keyframes particleFloat {
-            0% {
-                transform: translateY(110vh) translateX(0);
-                opacity: 0;
-            }
-            20% {
-                opacity: 0.6;
-            }
-            80% {
-                opacity: 0.6;
-            }
-            100% {
-                transform: translateY(-10vh) translateX(100px);
-                opacity: 0;
-            }
+            0% { transform: translateY(110vh) translateX(0); opacity: 0; }
+            20% { opacity: 0.8; }
+            80% { opacity: 0.8; }
+            100% { transform: translateY(-10vh) translateX(100px); opacity: 0; }
         }
         
         /* Main container */
@@ -533,315 +479,273 @@ const htmlContent = `<!DOCTYPE html>
             position: relative;
             z-index: 10;
             background: var(--glass-bg);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            border-radius: var(--radius-lg);
-            padding: 48px 40px;
-            max-width: 480px;
+            border-radius: 20px;
+            padding: 40px 36px;
+            max-width: 460px;
             width: 92%;
-            box-shadow: var(--shadow-lg), var(--shadow-glow);
-            animation: containerAppear 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 255, 136, 0.1), 0 0 40px rgba(0, 255, 136, 0.05);
+            animation: containerAppear 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         @keyframes containerAppear {
-            0% {
-                opacity: 0;
-                transform: translateY(30px) scale(0.95);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
         }
         
-        /* Logo section */
-        .logo-section {
-            margin-bottom: 32px;
+        /* Header */
+        .header {
             text-align: center;
+            margin-bottom: 30px;
         }
         
         .logo-icon {
-            font-size: 56px;
-            margin-bottom: 16px;
+            font-size: 48px;
+            margin-bottom: 12px;
             animation: logoPulse 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.3));
         }
         
         @keyframes logoPulse {
             0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+            50% { transform: scale(1.05); }
         }
         
-        .logo {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 32px;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 40%, #f093fb 100%);
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, #00ff88 0%, #00d4ff 50%, #7b2fff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 8px;
-            line-height: 1.2;
+            margin-bottom: 6px;
+            text-shadow: none;
         }
         
         .subtitle {
+            font-family: 'Share Tech Mono', monospace;
             color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 400;
-            letter-spacing: 0.3px;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
         
-        /* Status badges */
-        .status-badges {
+        .status-row {
             display: flex;
             gap: 8px;
             justify-content: center;
-            margin-top: 12px;
+            margin-top: 10px;
             flex-wrap: wrap;
         }
         
         .badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
+            gap: 5px;
+            padding: 5px 12px;
             border-radius: 100px;
-            font-size: 11px;
-            font-weight: 500;
-            background: var(--glass-hover);
-            border: 1px solid var(--glass-border);
-            color: var(--text-secondary);
-        }
-        
-        .badge.online {
+            font-size: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
             color: var(--success);
-            border-color: rgba(81, 207, 102, 0.3);
-            background: rgba(81, 207, 102, 0.08);
+            background: rgba(0, 255, 136, 0.05);
         }
         
         .badge .dot {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
-            background: currentColor;
-            animation: blink 2s ease-in-out infinite;
+            background: var(--success);
+            animation: blink 1.5s ease-in-out infinite;
+            box-shadow: 0 0 6px var(--success);
         }
         
         @keyframes blink {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+            50% { opacity: 0.3; }
         }
         
-        /* Input section */
-        .input-section {
-            margin-bottom: 20px;
+        /* Input */
+        .input-group {
+            margin-bottom: 16px;
         }
         
         .input-label {
+            font-family: 'Share Tech Mono', monospace;
             color: var(--text-secondary);
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             margin-bottom: 8px;
         }
         
-        .input-group {
+        .input-wrapper {
             position: relative;
         }
         
         .input-icon {
             position: absolute;
-            left: 16px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 18px;
-            color: var(--text-tertiary);
-            pointer-events: none;
+            font-size: 16px;
             z-index: 1;
         }
         
         input {
             width: 100%;
-            padding: 16px 16px 16px 48px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.04);
+            padding: 14px 14px 14px 44px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
             color: var(--text-primary);
-            font-size: 16px;
-            font-family: 'Inter', sans-serif;
-            font-weight: 400;
+            font-size: 15px;
+            font-family: 'JetBrains Mono', monospace;
             outline: none;
-            transition: var(--transition);
-            letter-spacing: 0.5px;
+            transition: all 0.3s;
+            letter-spacing: 1px;
         }
         
         input:focus {
-            border-color: var(--primary);
-            background: rgba(255, 255, 255, 0.06);
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), var(--shadow-glow);
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.1), 0 0 0 3px rgba(0, 255, 136, 0.05);
         }
         
         input::placeholder {
-            color: var(--text-tertiary);
-            font-weight: 400;
+            color: rgba(255, 255, 255, 0.3);
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0;
         }
         
-        /* Buttons */
+        /* Button */
         .btn {
             width: 100%;
-            padding: 16px 24px;
-            border-radius: var(--radius-md);
+            padding: 14px;
+            border-radius: 12px;
             border: none;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             cursor: pointer;
-            transition: var(--transition);
+            transition: all 0.3s;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             position: relative;
             overflow: hidden;
-            letter-spacing: 0.3px;
-        }
-        
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            transition: left 0.5s;
-        }
-        
-        .btn:hover::before {
-            left: 100%;
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-            margin-bottom: 12px;
+            background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+            color: #000;
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-primary:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.4);
         }
         
         .btn-primary:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
         
         .btn-secondary {
-            background: var(--glass-hover);
-            color: var(--text-primary);
-            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            margin-top: 10px;
+            font-size: 12px;
         }
         
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
         }
         
-        /* Result section */
+        /* Result */
         .result {
-            margin-top: 24px;
-            padding: 24px;
-            border-radius: var(--radius-md);
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--glass-border);
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(0, 255, 136, 0.03);
+            border: 1px solid rgba(0, 255, 136, 0.15);
             display: none;
-            animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideDown 0.4s ease;
         }
         
-        .result.show {
-            display: block;
-        }
+        .result.show { display: block; }
         
         @keyframes slideDown {
-            0% {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            0% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
         
         .result-label {
+            font-family: 'Share Tech Mono', monospace;
             color: var(--text-secondary);
-            font-size: 12px;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             margin-bottom: 8px;
-            font-weight: 500;
         }
         
         .code {
-            font-family: 'Space Grotesk', 'Courier New', monospace;
-            font-size: 36px;
-            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 32px;
+            font-weight: 700;
             letter-spacing: 10px;
-            color: var(--primary);
-            padding: 16px;
-            background: rgba(102, 126, 234, 0.1);
-            border-radius: var(--radius-sm);
-            border: 2px dashed rgba(102, 126, 234, 0.3);
+            color: #00ff88;
+            padding: 14px;
+            background: rgba(0, 255, 136, 0.05);
+            border-radius: 8px;
+            border: 2px dashed rgba(0, 255, 136, 0.3);
             text-align: center;
-            margin: 12px 0;
-            text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
         }
         
-        .status {
+        .status-text {
             color: var(--text-secondary);
-            font-size: 13px;
-            margin-top: 12px;
-            line-height: 1.6;
+            font-size: 12px;
+            margin-top: 10px;
+            line-height: 1.5;
         }
         
-        .status.success { color: var(--success); }
-        .status.error { color: var(--error); }
+        .status-text.success { color: var(--success); }
+        .status-text.error { color: var(--error); }
         
         /* Loader */
         .loader {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            justify-content: center;
+            gap: 8px;
         }
         
         .spinner {
-            width: 22px;
-            height: 22px;
-            border: 2.5px solid rgba(255, 255, 255, 0.2);
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
             border-radius: 50%;
-            border-top-color: white;
+            border-top-color: #000;
             animation: spin 0.7s linear infinite;
         }
         
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
-        /* Stats bar */
-        .stats-bar {
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid var(--glass-border);
+        /* Stats */
+        .stats {
             display: flex;
+            gap: 20px;
             justify-content: center;
-            gap: 24px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
         
         .stat {
@@ -849,90 +753,77 @@ const htmlContent = `<!DOCTYPE html>
         }
         
         .stat-value {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #00ff88;
         }
         
         .stat-label {
-            font-size: 11px;
-            color: var(--text-tertiary);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            color: var(--text-tertiary);
             margin-top: 4px;
         }
         
-        /* Responsive */
         @media (max-width: 480px) {
-            .container {
-                padding: 32px 24px;
-            }
-            .logo {
-                font-size: 26px;
-            }
-            .code {
-                font-size: 28px;
-                letter-spacing: 6px;
-            }
+            .container { padding: 28px 20px; }
+            .title { font-size: 18px; }
+            .code { font-size: 24px; letter-spacing: 6px; }
         }
     </style>
 </head>
 <body>
-    <!-- Animated background -->
-    <div class="bg-gradient"></div>
-    <div class="grid-overlay"></div>
-    
-    <!-- Floating flags -->
-    <div class="flags" id="flags"></div>
-    
-    <!-- Particles -->
+    <!-- Tech background -->
+    <div class="tech-bg" id="techBg"></div>
+    <div class="grid-lines"></div>
+    <div class="scan-lines"></div>
     <div class="particles" id="particles"></div>
     
     <!-- Main container -->
     <div class="container">
-        <div class="logo-section">
-            <div class="logo-icon">🔮</div>
-            <div class="logo">TARAGON SQUAD TRS</div>
-            <div class="subtitle">WhatsApp Multi-Device Pairing Portal</div>
-            <div class="status-badges">
-                <span class="badge online">
-                    <span class="dot"></span> Online
-                </span>
-                <span class="badge">🇻🇦 Multi-Session</span>
-                <span class="badge">🔐 TLS Secure</span>
+        <div class="header">
+            <div class="logo-icon">🛡️</div>
+            <div class="title">TARAGON SQUAD</div>
+            <div class="subtitle">WhatsApp Multi-Device Pairing</div>
+            <div class="status-row">
+                <span class="badge"><span class="dot"></span> ONLINE</span>
+                <span class="badge">🇻🇦 SECURE</span>
+                <span class="badge">⚡ READY</span>
             </div>
         </div>
         
-        <div class="input-section">
+        <div class="input-group">
             <div class="input-label">Phone Number</div>
-            <div class="input-group">
+            <div class="input-wrapper">
                 <span class="input-icon">📱</span>
-                <input type="tel" id="phone" placeholder="Enter with country code (e.g., 27785028986)" maxlength="15" autocomplete="off">
+                <input type="tel" id="phone" placeholder="27785028986" maxlength="15" autocomplete="off">
             </div>
         </div>
         
         <button class="btn btn-primary" id="pairBtn" onclick="requestPairing()">
-            <span id="btnText">⚡ Generate Pairing Code</span>
+            <span id="btnText">⚡ GENERATE PAIRING CODE</span>
         </button>
         
         <div class="result" id="result">
             <div class="result-label">Your Pairing Code</div>
             <div class="code" id="pairingCode">------</div>
-            <button class="btn btn-secondary" onclick="copyCode()" id="copyBtn">📋 Copy to Clipboard</button>
-            <p class="status" id="statusMsg">
+            <button class="btn btn-secondary" onclick="copyCode()" id="copyBtn">📋 COPY TO CLIPBOARD</button>
+            <p class="status-text" id="statusMsg">
                 Open WhatsApp → Linked Devices → Link a Device → Enter this code
             </p>
         </div>
         
-        <div class="stats-bar">
+        <div class="stats">
             <div class="stat">
                 <div class="stat-value" id="botCount">0</div>
                 <div class="stat-label">Active Bots</div>
             </div>
             <div class="stat">
                 <div class="stat-value">50</div>
-                <div class="stat-label">Max Capacity</div>
+                <div class="stat-label">Max</div>
             </div>
             <div class="stat">
                 <div class="stat-value">24/7</div>
@@ -943,58 +834,82 @@ const htmlContent = `<!DOCTYPE html>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Create floating flags
-        const flagsContainer = document.getElementById('flags');
-        const flagEmojis = ['🇻🇦', '🔮', '⚡', '🌟', '💎', '🔥', '🛡️', '👑'];
+        // Generate tech background words
+        const techBg = document.getElementById('techBg');
+        const words = [
+            'TARAGON', 'SQUAD', 'BYPASS', 'SECURE', 'ENCRYPT', 'PROXY', 'TUNNEL', 'MATRIX',
+            'UPLINK', 'DOWNLOAD', 'STREAM', 'BOT', 'AI', 'CLOUD', 'SERVER', 'PACKET',
+            'NODE', 'SYNC', 'PAIR', 'CONNECT', '🇻🇦', 'TRS', 'VPN', 'DNS', 'TCP', 'UDP',
+            'HTTP', 'SSL', 'TLS', 'DATA', 'BYTE', 'CODE', 'ZERO', 'ONE', 'HACK', 'ROOT'
+        ];
         
-        for (let i = 0; i < 60; i++) {
-            const flag = document.createElement('div');
-            flag.className = 'flag';
-            flag.textContent = flagEmojis[Math.floor(Math.random() * flagEmojis.length)];
-            flag.style.left = Math.random() * 100 + '%';
-            flag.style.fontSize = (Math.random() * 28 + 14) + 'px';
-            flag.style.animationDuration = (Math.random() * 12 + 8) + 's';
-            flag.style.animationDelay = Math.random() * 10 + 's';
-            flagsContainer.appendChild(flag);
+        const fonts = [
+            "'Orbitron', sans-serif",
+            "'JetBrains Mono', monospace",
+            "'Share Tech Mono', monospace",
+            "'Rajdhani', sans-serif",
+            "'Space Grotesk', sans-serif",
+            "'Inter', sans-serif"
+        ];
+        
+        const colors = [
+            '#00ff88', '#00d4ff', '#7b2fff', '#ff006e', '#ffaa00', 
+            '#00ffcc', '#ff6600', '#cc00ff', '#00ccff', '#ff3366',
+            '#33ff99', '#ff9933', '#9933ff', '#33ccff', '#ff3388'
+        ];
+        
+        for (let i = 0; i < 80; i++) {
+            const word = document.createElement('span');
+            word.className = 'tech-word';
+            word.textContent = words[Math.floor(Math.random() * words.length)];
+            word.style.left = Math.random() * 100 + '%';
+            word.style.fontFamily = fonts[Math.floor(Math.random() * fonts.length)];
+            word.style.color = colors[Math.floor(Math.random() * colors.length)];
+            word.style.fontSize = (Math.random() * 40 + 12) + 'px';
+            word.style.animationDuration = (Math.random() * 20 + 10) + 's';
+            word.style.animationDelay = Math.random() * 15 + 's';
+            word.style.opacity = (Math.random() * 0.1 + 0.05);
+            techBg.appendChild(word);
         }
         
-        // Create particles
+        // Particles
         const particlesContainer = document.getElementById('particles');
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 40; i++) {
             const particle = document.createElement('div');
             particle.className = 'particle';
             particle.style.left = Math.random() * 100 + '%';
-            particle.style.animationDuration = (Math.random() * 6 + 4) + 's';
-            particle.style.animationDelay = Math.random() * 5 + 's';
-            particle.style.width = (Math.random() * 3 + 1) + 'px';
+            particle.style.width = (Math.random() * 4 + 1) + 'px';
             particle.style.height = particle.style.width;
+            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+            particle.style.boxShadow = '0 0 10px ' + particle.style.background;
+            particle.style.animationDuration = (Math.random() * 8 + 4) + 's';
+            particle.style.animationDelay = Math.random() * 5 + 's';
             particlesContainer.appendChild(particle);
         }
         
         // Socket.io
         const socket = io();
-        let phoneNumber = '';
         let pairingCode = '';
         
         socket.on('pairingCode', (data) => {
             document.getElementById('pairingCode').textContent = data.code;
             document.getElementById('result').classList.add('show');
-            document.getElementById('statusMsg').innerHTML = '<span class="success">✅ Code generated successfully!</span><br>Open WhatsApp → Linked Devices → Link a Device';
-            document.getElementById('btnText').innerHTML = '⚡ Generate Pairing Code';
+            document.getElementById('statusMsg').innerHTML = '<span class="success">✅ Code generated!</span><br>Open WhatsApp → Linked Devices → Link a Device';
+            document.getElementById('btnText').innerHTML = '⚡ GENERATE PAIRING CODE';
             document.getElementById('pairBtn').disabled = false;
             pairingCode = data.code;
         });
         
         socket.on('pairingError', (data) => {
             document.getElementById('statusMsg').innerHTML = '<span class="error">❌ ' + data.error + '</span>';
-            document.getElementById('btnText').innerHTML = '⚡ Generate Pairing Code';
+            document.getElementById('btnText').innerHTML = '⚡ GENERATE PAIRING CODE';
             document.getElementById('pairBtn').disabled = false;
             document.getElementById('result').classList.add('show');
         });
         
         socket.on('botConnected', (data) => {
-            document.getElementById('statusMsg').innerHTML = '<span class="success">✅ Bot connected as +' + data.number + '</span>';
-            document.getElementById('btnText').innerHTML = '⚡ Generate Pairing Code';
+            document.getElementById('statusMsg').innerHTML = '<span class="success">✅ Bot +' + data.number + ' connected!</span>';
+            document.getElementById('btnText').innerHTML = '⚡ GENERATE PAIRING CODE';
             document.getElementById('pairBtn').disabled = false;
         });
         
@@ -1003,12 +918,12 @@ const htmlContent = `<!DOCTYPE html>
         });
         
         function requestPairing() {
-            phoneNumber = document.getElementById('phone').value.replace(/\\D/g, '');
+            const phoneNumber = document.getElementById('phone').value.replace(/\\D/g, '');
             if (!phoneNumber) {
                 alert('Please enter a valid phone number');
                 return;
             }
-            document.getElementById('btnText').innerHTML = '<span class="loader"><span class="spinner"></span> Generating...</span>';
+            document.getElementById('btnText').innerHTML = '<span class="loader"><span class="spinner"></span> GENERATING...</span>';
             document.getElementById('pairBtn').disabled = true;
             document.getElementById('result').classList.remove('show');
             socket.emit('requestPairing', { phone: phoneNumber });
@@ -1018,19 +933,18 @@ const htmlContent = `<!DOCTYPE html>
             if (pairingCode) {
                 navigator.clipboard.writeText(pairingCode).then(() => {
                     const btn = document.getElementById('copyBtn');
-                    btn.textContent = '✅ Copied Successfully!';
-                    btn.style.borderColor = 'rgba(81, 207, 102, 0.5)';
-                    btn.style.color = '#51cf66';
+                    btn.textContent = '✅ COPIED!';
+                    btn.style.borderColor = 'rgba(0, 255, 136, 0.5)';
+                    btn.style.color = '#00ff88';
                     setTimeout(() => {
-                        btn.textContent = '📋 Copy to Clipboard';
-                        btn.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                        btn.textContent = '📋 COPY TO CLIPBOARD';
+                        btn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                         btn.style.color = 'white';
                     }, 2500);
                 });
             }
         }
         
-        // Enter key support
         document.getElementById('phone').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') requestPairing();
         });
@@ -1040,60 +954,96 @@ const htmlContent = `<!DOCTYPE html>
 
 fs.writeFileSync(path.join(__dirname, 'public', 'index.html'), htmlContent);
 
-// Socket.io handling for pairing
+// ======================== PAIRING HANDLER ========================
+async function createBotSession(phone, socket) {
+    try {
+        const sessionName = `session_${phone}_${Date.now()}`;
+        const sessionDir = path.join(SESSIONS_DIR, sessionName);
+        
+        const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+        const { version } = await fetchLatestBaileysVersion();
+
+        const sock = makeWASocket({
+            version,
+            auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
+            printQRInTerminal: false,
+            logger: pino({ level: 'silent' }),
+            browser: ['Taragon Bot', 'Chrome', '20.0.04'],
+            connectTimeoutMs: 60000,
+            keepAliveIntervalMs: 30000,
+        });
+
+        // Generate pairing code
+        const code = await sock.requestPairingCode(phone);
+        console.log(`📱 Pairing code generated for ${phone}: ${code}`);
+        socket.emit('pairingCode', { code });
+
+        // Set a timeout for connection
+        const connectionTimeout = setTimeout(() => {
+            if (!activeBots.has(sessionName)) {
+                sock.end();
+                socket.emit('pairingError', { error: 'Connection timeout. Please try again.' });
+            }
+        }, 120000);
+
+        // Wait for connection
+        sock.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect } = update;
+            
+            if (connection === 'open') {
+                clearTimeout(connectionTimeout);
+                const botNumber = sock.user.id.split(':')[0];
+                activeBots.set(sessionName, { sock, phone, number: botNumber });
+                io.emit('botCount', { count: activeBots.size });
+                socket.emit('botConnected', { number: botNumber });
+                console.log(`✅ Bot ${botNumber} connected! Total: ${activeBots.size}/50`);
+                setupBotHandlers(sock, botNumber);
+            } else if (connection === 'close') {
+                clearTimeout(connectionTimeout);
+                const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+                if (!shouldReconnect) {
+                    activeBots.delete(sessionName);
+                    io.emit('botCount', { count: activeBots.size });
+                    console.log(`❌ Bot session ended for ${phone}`);
+                }
+            }
+        });
+
+        sock.ev.on('creds.update', saveCreds);
+
+    } catch (err) {
+        console.error('Pairing error:', err);
+        socket.emit('pairingError', { error: err.message || 'Failed to generate pairing code. Please try again.' });
+    }
+}
+
 io.on('connection', (socket) => {
+    console.log('🌐 Web client connected');
     socket.emit('botCount', { count: activeBots.size });
 
     socket.on('requestPairing', async (data) => {
         const { phone } = data;
         
+        if (!phone || phone.length < 5) {
+            socket.emit('pairingError', { error: 'Please enter a valid phone number.' });
+            return;
+        }
+
         if (activeBots.size >= 50) {
             socket.emit('pairingError', { error: 'Maximum 50 bots reached. Please wait for a slot.' });
             return;
         }
 
-        try {
-            const sessionName = `session_${phone}_${Date.now()}`;
-            const sessionDir = path.join(SESSIONS_DIR, sessionName);
-            
-            const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-            const { version } = await fetchLatestBaileysVersion();
+        console.log(`🔑 Pairing request for: ${phone}`);
+        await createBotSession(phone, socket);
+    });
 
-            const sock = makeWASocket({
-                version,
-                auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
-                printQRInTerminal: false,
-                logger: pino({ level: 'silent' }),
-                browser: ['Taragon Bot', 'Chrome', '20.0.04'],
-            });
-
-            const code = await sock.requestPairingCode(phone);
-            socket.emit('pairingCode', { code });
-
-            sock.ev.on('connection.update', async (update) => {
-                const { connection } = update;
-                if (connection === 'open') {
-                    const botNumber = sock.user.id.split(':')[0];
-                    activeBots.set(sessionName, { sock, phone, number: botNumber });
-                    io.emit('botCount', { count: activeBots.size });
-                    socket.emit('botConnected', { number: botNumber });
-                    console.log(`✅ Bot ${botNumber} connected! Total: ${activeBots.size}/50`);
-                    setupBotHandlers(sock, botNumber);
-                } else if (connection === 'close') {
-                    activeBots.delete(sessionName);
-                    io.emit('botCount', { count: activeBots.size });
-                }
-            });
-
-            sock.ev.on('creds.update', saveCreds);
-
-        } catch (err) {
-            socket.emit('pairingError', { error: err.message || 'Pairing failed. Try again.' });
-        }
+    socket.on('disconnect', () => {
+        console.log('🌐 Web client disconnected');
     });
 });
 
-// Bot handler setup for each instance
+// ======================== BOT HANDLER ========================
 function setupBotHandlers(sock, botNumber) {
     const ownerNumber = `${botNumber}@s.whatsapp.net`;
     const botName = '𝐓𝐀𝐑𝐀𝐆𝐎𝐍 𝐒𝐐𝐔𝐀𝐃 𝐓𝐑𝐒🇻🇦';
@@ -1168,9 +1118,8 @@ function setupBotHandlers(sock, botNumber) {
                 const quotedParticipant = msg.message.extendedTextMessage.contextInfo?.participant;
                 if (mentionedJid.some(j => botJids.includes(j))) shouldReply = true;
                 if (quotedParticipant && botJids.includes(quotedParticipant)) shouldReply = true;
-            } else if (!isGroup) {
-                shouldReply = true;
-            }
+            } else if (!isGroup) shouldReply = true;
+            
             if (shouldReply) {
                 await sock.sendPresenceUpdate('composing', jid).catch(() => {});
                 const userId = sender;
@@ -1264,18 +1213,20 @@ function setupBotHandlers(sock, botNumber) {
     });
 }
 
-// Start server
+// ======================== START SERVER ========================
 server.listen(PORT, () => {
-    console.log(`\n╔════════════════════════════════════════╗`);
-    console.log(`║     🌐 Taragon Bot Web Panel           ║`);
-    console.log(`║     Port: ${PORT}                        ║`);
-    console.log(`║     URL: http://localhost:${PORT}          ║`);
-    console.log(`║     Max Bots: 50                       ║`);
-    console.log(`║     Status: Ready to Pair              ║`);
-    console.log(`╚════════════════════════════════════════╝\n`);
+    console.log(`\n╔══════════════════════════════════════════════╗`);
+    console.log(`║                                              ║`);
+    console.log(`║   🛡️  TARAGON SQUAD BOT PANEL               ║`);
+    console.log(`║                                              ║`);
+    console.log(`║   🌐 Port: ${PORT}                              ║`);
+    console.log(`║   📱 Max Bots: 50                            ║`);
+    console.log(`║   ⚡ Status: Ready to Pair                    ║`);
+    console.log(`║                                              ║`);
+    console.log(`╚══════════════════════════════════════════════╝\n`);
 });
 
-// Start the main bot (optional)
+// Start main bot if session exists
 async function startMainBot() {
     if (fs.existsSync('auth_info_baileys')) {
         try {
@@ -1297,6 +1248,4 @@ async function startMainBot() {
     }
 }
 
-startMainBot().catch(() => {
-    console.log('Open the web panel to pair your first device.');
-});
+startMainBot().catch(() => {});
