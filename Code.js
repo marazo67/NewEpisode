@@ -1,4 +1,4 @@
-// pairing.js – Run once in Railway console
+// pairing.js – Run once in Railway console, stays alive for 15 minutes
 const { makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, Browsers, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
@@ -55,22 +55,35 @@ async function startPairing() {
         process.exit(1);
     }
 
-    // Wait for successful connection
+    // Wait for successful connection – 15 minutes timeout
     let paired = false;
+    let keepAliveInterval;
+
     const timeout = setTimeout(() => {
         if (!paired) {
-            console.error('\n⏰ Timeout: No device linked within 2 minutes.');
+            if (keepAliveInterval) clearInterval(keepAliveInterval);
+            console.error('\n⏰ Timeout: No device linked within 15 minutes.');
             process.exit(1);
         }
-    }, 120000);
+    }, 15 * 60 * 1000); // 15 minutes
+
+    // Start keep-alive: print a dot every 30 seconds to prevent console sleep
+    keepAliveInterval = setInterval(() => {
+        if (!paired) {
+            process.stdout.write('.');
+        } else {
+            clearInterval(keepAliveInterval);
+        }
+    }, 30000);
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'open' && !paired) {
             paired = true;
             clearTimeout(timeout);
+            clearInterval(keepAliveInterval);
             await saveCreds();
-            console.log(`\n✅ Successfully linked with +${sock.user.id.split(':')[0]}`);
+            console.log(`\n\n✅ Successfully linked with +${sock.user.id.split(':')[0]}`);
             console.log(`\n🎉 YOUR SESSION ID: ${sessionId}\n`);
             console.log(`🔐 IMPORTANT: Copy this Session ID. You will use it in your main bot as SESSION_ID.\n`);
             console.log(`📁 Session files saved in: ${sessionPath}`);
@@ -81,6 +94,7 @@ async function startPairing() {
         if (connection === 'close' && !paired) {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
             if (!shouldReconnect) {
+                clearInterval(keepAliveInterval);
                 console.error('❌ Session logged out. Restart script.');
                 process.exit(1);
             }
